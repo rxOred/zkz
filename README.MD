@@ -1,3 +1,3 @@
-use out/build or Debug folders as build folders
-run cmake
-
+TODO fix issues with breakpoint list and reset
+TODO proper way to handle signals
+TODO function breakpoints
