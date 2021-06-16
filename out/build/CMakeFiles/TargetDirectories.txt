@@ -1,4 +1,0 @@
-/home/redriot/programming/c++/dbg/out/build/CMakeFiles/edit_cache.dir
-/home/redriot/programming/c++/dbg/out/build/CMakeFiles/libelfin.dir
-/home/redriot/programming/c++/dbg/out/build/CMakeFiles/rebuild_cache.dir
-/home/redriot/programming/c++/dbg/out/build/CMakeFiles/zkz.dir
