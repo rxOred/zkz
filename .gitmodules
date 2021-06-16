@@ -1,0 +1,3 @@
+[submodule "libs/libelfin"]
+	path = libs/libelfin
+	url = https://github.com/aclements/libelfin.git

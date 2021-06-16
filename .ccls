@@ -1,0 +1,4 @@
+clang++
+%h %cpp -std=c++17
+./libs/libelfin/elf
+./libs/libelfin/dwarf

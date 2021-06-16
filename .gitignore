@@ -1,0 +1,8 @@
+dbg
+*.o
+*.sh
+vgcore.*
+Debug/*
+a.out
+*.json
+Debug
