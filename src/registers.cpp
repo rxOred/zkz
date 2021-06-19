@@ -3,6 +3,8 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <vector>
+#include <cstdio>
+#include <stdlib.h>
 
 int info_registers_all(Debug& debug, struct user_regs_struct& regs){
 
@@ -77,36 +79,67 @@ int set_register(Debug& debug, struct user_regs_struct& regs, std::string reg, u
 
             case 0:
                 RAX = value;
+                break;
+
             case 1:
                 RCX = value;
+                break;
+
             case 2:
                 RDX = value;
+                break;
+
             case 3:
                 RBX = value;
+                break;
+
             case 4:
                 RSP = value;
+                break;
+
             case 5:
                 RBP = value;
+                break;
+
             case 6:
                 RSI = value;
+                break;
+
             case 7:
                 RDI = value;
+                break;
+
             case 8:
                 R8 = value;
+                break;
+
             case 9:
                 R9 = value;
+                break;
+
             case 10:
                 R10 = value;
+                break;
+
             case 11:
                 R11 = value;
+                break;
+
             case 12:
                 R12 = value;
+                break;
+
             case 13:
                 R13 = value;
+                break;
+
             case 14:
                 R14 = value;
+                break;
+
             case 15:
                 R15 = value;
+                break;
             }
 
             if(ptrace(PTRACE_SETREGS, debug.get_pid(), nullptr, &regs) < 0){

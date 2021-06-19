@@ -12,7 +12,7 @@ void print_help(void){
 void print_usage(void){
 
     //free memory and exit
-    printf("something\n");
+    log.Print("something\n");
 }
 
 void parse_arguments(Debug& debug, int argc, char *argv[]){
@@ -31,7 +31,7 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
                 pathname = (char **)realloc(pathname, sizeof(char **) * (count + 2));
                 if(!pathname){
 
-                    perror("[X] Memory allocation error :: ");
+                    log.PError("[X] Memory allocation error :: ");
                     exit(EXIT_FAILURE);
                 }
  
@@ -48,7 +48,7 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
             i++;
             if(!argv[i] || i == argc) {
 
-                fprintf(stderr, "[X] Expected a process id\n");
+                log.Error("[X] Expected a process id\n");
                 print_usage();     /* user have to specify a process id */
                 exit(EXIT_FAILURE);
             }

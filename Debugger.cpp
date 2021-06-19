@@ -41,7 +41,7 @@ int wait_for_process(Debug& debug){
 
     if(WIFEXITED(wstatus)){
 
-        printf("process terminated with %d\n", wstatus);
+        log.Print("process terminated with %d\n", wstatus);
         debug.set_program_state(false);     // no other function should set program state to false
         return EXIT_STATUS;
     }
@@ -51,7 +51,7 @@ int wait_for_process(Debug& debug){
     }
     else if(WIFSIGNALED(wstatus)){
 
-        printf("process recieved a signal %d\n", wstatus);
+        log.Print("process recieved a signal %d\n", wstatus);
         return SIGNALED_STATUS;
     }
 
@@ -65,7 +65,7 @@ int start_process(Debug& debug){
         pid_t pid = fork();
         if(pid == -1){
 
-            perror("fork failed :");
+            log.PError("fork failed :");
             return -1;
         }
         else if(pid == 0){
@@ -73,13 +73,13 @@ int start_process(Debug& debug){
             personality(ADDR_NO_RANDOMIZE);
             if(ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0){
 
-                perror("ptrace failed :");
+                log.PError("ptrace failed :");
                 exit(EXIT_FAILURE);
             }
             char **pathname = debug.get_pathname();
             if(execvp(pathname[0], pathname) == -1){
 
-                perror("execvp failed :");
+                log.PError("execvp failed :");
                 exit(EXIT_FAILURE);
             }
         }
@@ -116,11 +116,11 @@ int _disable_breakpoint(BreakpointList& li, int breakpoint_number){
     Breakpoint *b = li.get_element_by_breakpoint_number(breakpoint_number);
     if(b == nullptr){   // if returns null, breakpoint is not found
 
-        printf("[X] Breakpoint %d not found\n", breakpoint_number); 
+        log.Print("[X] Breakpoint %d not found\n", breakpoint_number); 
     }
 
     b->disable_breakpoint();
-    printf("breakpoint %d disabled\n", breakpoint_number);
+    log.Print("breakpoint %d disabled\n", breakpoint_number);
     return 0;
 }
 
@@ -129,7 +129,7 @@ int restore_breakpoint(Debug& debug, Breakpoint *b, uint64_t address){
 
     if(ptrace(PTRACE_POKEDATA, debug.get_pid(), address, b->origdata) < 0){
 
-        perror("[X] Ptrace error");
+        log.PError("[X] Ptrace error");
         return -1;
     }
 
@@ -143,7 +143,7 @@ int place_breakpoint(Debug& debug, BreakpointList& li, uint64_t address){
     uint64_t origdata = ptrace(PTRACE_PEEKDATA, debug.get_pid(), address, nullptr);
     if(origdata < 0){
 
-        perror("[X] Ptrace error :");
+        log.PError("[X] Ptrace error :");
         return -1;
     }
     li.append_element(address, origdata);
@@ -151,11 +151,11 @@ int place_breakpoint(Debug& debug, BreakpointList& li, uint64_t address){
     uint64_t data_w_interrupt = ((origdata & 0xffffffffffffff00) | 0xcc);
     if(ptrace(PTRACE_POKEDATA, debug.get_pid(), address, data_w_interrupt) < 0){
 
-        perror("[X] Ptrace error :");
+        log.PError("[X] Ptrace error :");
         return -1;
     }
 
-    printf("\t[!] Breakpoint placed at address : %lx\n", address);
+    log.Print("\t[!] Breakpoint placed at address : %lx\n", address);
     return 0;
 }
 
@@ -166,7 +166,7 @@ int step_auto(Debug& debug, BreakpointList& li, struct user_regs_struct& regs){
 
         if(ptrace(PTRACE_SINGLESTEP, debug.get_pid(), nullptr, nullptr) < 0){
 
-            perror("[X] Ptrace error");
+            log.PError("[X] Ptrace error");
             return -1;
         }
 
@@ -177,7 +177,7 @@ int step_auto(Debug& debug, BreakpointList& li, struct user_regs_struct& regs){
         }
         else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS){
 
-            printf("---> rip: %llx\n", regs.rip);
+            log.Print("---> rip: %llx\n", regs.rip);
         }
 
         if(debug.get_inforeg()){
@@ -187,7 +187,7 @@ int step_auto(Debug& debug, BreakpointList& li, struct user_regs_struct& regs){
 
         if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, &regs) < 0){
 
-            perror("[X] Ptrace error");
+            log.PError("[X] Ptrace error");
             return -1;
         }
 
@@ -201,7 +201,7 @@ int step_auto(Debug& debug, BreakpointList& li, struct user_regs_struct& regs){
             if(b->get_state()){
 
 
-                printf("\t[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
+                log.Print("\t[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
 
                 restore_breakpoint(debug, b, regs.rip - 1); 
                 return 0;
@@ -224,7 +224,7 @@ int step_x(Debug& debug, BreakpointList& li, struct user_regs_struct& regs, int 
 
         if(ptrace(PTRACE_SINGLESTEP, debug.get_pid(), nullptr, nullptr) < 0){
 
-            perror("[X] Ptrace error");
+            log.PError("[X] Ptrace error");
             return -1;
         }
 
@@ -242,7 +242,7 @@ int step_x(Debug& debug, BreakpointList& li, struct user_regs_struct& regs, int 
 
             if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, &regs) < 0){
 
-                perror("[X] Ptrace error");
+                log.PError("[X] Ptrace error");
                 return -1;
             }
 
@@ -258,7 +258,7 @@ int step_x(Debug& debug, BreakpointList& li, struct user_regs_struct& regs, int 
                 puts("break is set");
                 if(b->get_state()){     // return true means breakpoint is enabled
 
-                    printf("\n[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
+                    log.Print("\n[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
 
                     if(restore_breakpoint(debug, b, regs.rip - 1) < -1) return -1;
                     return 0;
@@ -272,7 +272,7 @@ int step_x(Debug& debug, BreakpointList& li, struct user_regs_struct& regs, int 
         }
     }
 
-    printf("---> rip: %llx\n", regs.rip);
+    log.Print("---> rip: %llx\n", regs.rip);
     return 0;
 }
 
@@ -283,19 +283,19 @@ int continue_execution(Debug& debug, BreakpointList& li, struct user_regs_struct
         debug.set_syscall_state(false);
     }
 
-    printf("\t[!] Continuing execution...\n"); 
+    log.Print("\t[!] Continuing execution...\n"); 
     if(debug.get_systrace()){
 
         if(ptrace(PTRACE_SYSCALL, debug.get_pid(), nullptr, nullptr) < 0){
 
-            perror("[X] Ptrace error :");
+            log.PError("[X] Ptrace error :");
             return -1;
         }
     }
     else{ 
         if(ptrace(PTRACE_CONT, debug.get_pid(), nullptr, nullptr) < 0){
 
-            perror("[X] Ptrace error :");
+            log.PError("[X] Ptrace error :");
             return -1;
         }
     }
@@ -309,7 +309,7 @@ int continue_execution(Debug& debug, BreakpointList& li, struct user_regs_struct
 
         if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, &regs) < 0){
 
-            perror("[X] Ptrace error :");
+            log.PError("[X] Ptrace error :");
             return -1;
         }
 
@@ -318,7 +318,7 @@ int continue_execution(Debug& debug, BreakpointList& li, struct user_regs_struct
 
             if(debug.get_systrace()){   // if user specified sys trace, then stop and let him execute commands
 
-                printf("\t[!] System call intercepted: %llx\n", regs.rax);
+                log.Print("\t[!] System call intercepted: %llx\n", regs.rax);
                 debug.set_syscall_state(true);      // we set system call state to true
 
                 if(debug.get_inforeg()){
@@ -340,7 +340,7 @@ int continue_execution(Debug& debug, BreakpointList& li, struct user_regs_struct
             // we have to restore breakpoint instruction before continue
             if(b->get_state()){     // if return true, breakpoint is enabled
 
-                printf("\t[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
+                log.Print("\t[!] Stopped execution at %llx : breakpoint number %d\n", regs.rip -1, b->breakpoint_number);
 
                 if(debug.get_inforeg()){
 
@@ -372,12 +372,12 @@ int mainloop(Debug& debug){
  
     if(line_info.init_debug_lines(debug) < 0){
 
-        fprintf(stderr, "[X] Error reading dwarf information\n");
+        log.Error("[X] Error reading dwarf information\n");
         dwarf_state = false;
     }
     if(line_info.parse_lines(debug) < 0){
 
-        fprintf(stderr, "[X] Error reading dwarf information\n");
+        log.Error("[X] Error reading dwarf information\n");
         dwarf_state  = false;
     }
 
@@ -388,10 +388,10 @@ int mainloop(Debug& debug){
         /*  tokenizing commands */
         std::string command;
 
-        printf("[zkz] > ");     //prompt
+        log.Print("[zkz] > ");     //prompt
         if(!std::getline(std::cin, command)){   // if returns nothing, IO errorr
 
-            fprintf(stderr, "[X] IO error\n");
+            log.Error("[X] IO error\n");
             return -1;
         }
         if(command.empty()) continue;   // if user didnt input anything, just continue
@@ -412,25 +412,25 @@ int mainloop(Debug& debug){
 /* TODO there's a bug with reset */
             if(list.get_number_of_breakpoints() >= 1){
 
-                printf("[!] Do you want to keep breakpoints? [yes/no] ");
+                log.Print("[!] Do you want to keep breakpoints? [yes/no] ");
                 if(!std::getline(std::cin, word)){
 
-                    fprintf(stderr, "[X] IO error\n");
+                    log.Error("[X] IO error\n");
                     return -1;
                 }
 
                 if(word.empty()){
 
-                    printf("Assumed [yes]...\nCleaning all breakpoints...\n");
+                    log.Print("Assumed [yes]...\nCleaning all breakpoints...\n");
                     remove_all_breakpoints(debug, list);
                 }
                 if(word.compare("no") == 0 || word.compare("n") == 0){
 
-                    printf("Saving breakpoints...\n");
+                    log.Print("Saving breakpoints...\n");
                 }
                 else if(word.compare("yes") == 0 || word.compare("y") == 0){
 
-                    printf("Cleaning all breakpoints...\n");
+                    log.Print("Cleaning all breakpoints...\n");
                     remove_all_breakpoints(debug, list);
                 }
             }
@@ -455,7 +455,7 @@ int mainloop(Debug& debug){
 
                 if(debug.get_pathname() == nullptr && debug.get_pid() != 0){    // because we cant start a process without knowning its pathname
 
-                    printf("Press any key to exit zkz\n");
+                    log.Print("Press any key to exit zkz\n");
                     getchar();
                     return EXIT_STATUS;
                 }
@@ -474,16 +474,16 @@ int mainloop(Debug& debug){
 
                     if(commands.size() < 2){
 
-                        printf("Please select a compilation unit > ");
+                        log.Print("Please select a compilation unit > ");
                         if(!std::getline(std::cin, word)){
 
-                            fprintf(stderr, "[X] IO error");
+                            log.Error("[X] IO error");
                             return -1;
                         }
 
                         if(word.empty()){
 
-                            printf("Invalid unit number.. default unit selected");
+                            log.Print("Invalid unit number.. default unit selected");
                             // dump list
                             continue;
                         }
@@ -494,11 +494,11 @@ int mainloop(Debug& debug){
                             compilation_unit = std::stoi(word, nullptr, 10);
                         }catch (std::out_of_range& err_1){
 
-                            fprintf(stderr, "[X] Invalid range :: %s\n", err_1.what());
+                            log.Error("[X] Invalid range :: %s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
 
-                            fprintf(stderr, "[X] Invalid unit number :: %s\n", err_2.what());
+                            log.Error("[X] Invalid unit number :: %s\n", err_2.what());
                             continue;
                         }
 
@@ -513,11 +513,11 @@ int mainloop(Debug& debug){
                             compilation_unit = std::stoi(commands[1],nullptr, 10);
                         }catch(std::out_of_range& err_1){
 
-                            fprintf(stderr, "[X] Invalid range :: %s\n", err_1.what());
+                            log.Error("[X] Invalid range :: %s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
 
-                            fprintf(stderr, "[X] Invalid unit number :: %s\n", err_2.what());
+                            log.Error("[X] Invalid unit number :: %s\n", err_2.what());
                             continue;
                         }
 
@@ -526,12 +526,12 @@ int mainloop(Debug& debug){
                 }
                 else{
 
-                    printf("[X] debug information not available\n");
+                    log.Print("[X] debug information not available\n");
                     continue;
                 }
             }else{
 
-                printf("[X] Program is not running\n");
+                log.Print("[X] Program is not running\n");
                 continue;
             }
         }
@@ -542,16 +542,16 @@ int mainloop(Debug& debug){
                 if(dwarf_state){
                     if(commands.size() <= 1){
 
-                        printf("\t[!] Please select a comilation unit\n");
+                        log.Print("\t[!] Please select a comilation unit\n");
                         if(!std::getline(std::cin, word)){
 
-                            fprintf(stderr, "[X] IO error\n");
+                            log.Error("[X] IO error\n");
                             return -1;
                         }
 
                         if(word.empty()){
 
-                            printf("[X] Invalid comilation unit number\n");
+                            log.Print("[X] Invalid comilation unit number\n");
                             continue;
                         }
 
@@ -560,11 +560,11 @@ int mainloop(Debug& debug){
                             default_compilation_unit = std::stoi(word, nullptr, 10);
                         }catch (std::out_of_range const& err_1){
 
-                            fprintf(stderr, "[X] Invalid range\n");
+                            log.Error("[X] Invalid range\n");
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            fprintf(stderr, "[X] Invalid compilation unit number\n");
+                            log.Error("[X] Invalid compilation unit number\n");
                             continue;
                         }
                     }
@@ -574,28 +574,28 @@ int mainloop(Debug& debug){
                             default_compilation_unit = std::stoi(commands[1], nullptr, 10);
                             if(default_compilation_unit < 0 || default_compilation_unit > line_info.get_number_of_compilation_units()){
 
-                                printf("Compilation unit number is not in range\n");
+                                log.Print("Compilation unit number is not in range\n");
                                 continue;
                             }
-                            printf("Compilation unit : %d selected\n", default_compilation_unit);
+                            log.Print("Compilation unit : %d selected\n", default_compilation_unit);
                         }catch (std::out_of_range const& err_1){
 
-                            fprintf(stderr, "[X] Invalid range\n");
+                            log.Error("[X] Invalid range\n");
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            fprintf(stderr, "[X] Invalid compilation unit number\n");
+                            log.Error("[X] Invalid compilation unit number\n");
                             continue;
                         }
                     }
                 }else{
 
-                    printf("[X] Debug information not available\n");
+                    log.Print("[X] Debug information not available\n");
                     continue;
                 }
             }else{
 
-                printf("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
                 continue;
             }
         }
@@ -608,16 +608,16 @@ int mainloop(Debug& debug){
                     uint64_t address;
                     if(commands.size() < 2){
 
-                        printf("\t[!] Enter line to place a breakpoint >");
+                        log.Print("\t[!] Enter line to place a breakpoint >");
                         if(!std::getline(std::cin, word)){
 
-                            fprintf(stderr, "[X] IO error\n");
+                            log.Error("[X] IO error\n");
                             return -1;
                         }
 
                         if(word.empty()){
 
-                            printf("[X] Invalid line number\n");
+                            log.Print("[X] Invalid line number\n");
                             continue;
                         }
 
@@ -626,17 +626,17 @@ int mainloop(Debug& debug){
                             address = line_info.get_address_by_line(default_compilation_unit, std::stoi(word, nullptr, 10));
                             if(address < 0){
 
-                                printf("[X] Address for corresponding line is not found\n");
+                                log.Print("[X] Address for corresponding line is not found\n");
                                 continue;
                             }
  
                        }catch (std::out_of_range& err_1) {
 
-                            fprintf(stderr, "[X] Invalid range\n");
+                            log.Error("[X] Invalid range\n");
                             continue;
                         }catch (std::invalid_argument& err_2) {
 
-                            fprintf(stderr, "[X] Invalid line number\n");
+                            log.Error("[X] Invalid line number\n");
                             continue;
                         }
 
@@ -650,17 +650,17 @@ int mainloop(Debug& debug){
                                 address = line_info.get_address_by_line(default_compilation_unit, std::stoi(commands[i], nullptr, 10));
                             }catch (std::out_of_range& err_1) {
 
-                                fprintf(stderr, "[X] Invalid range\n");
+                                log.Error("[X] Invalid range\n");
                                 continue;
                             }catch (std::invalid_argument& err_2) {
 
-                                fprintf(stderr, "[X] Invalid line number\n");
+                                log.Error("[X] Invalid line number\n");
                                 continue;
                             }
 
                             if(address < 0){        // if this true, indicates that address is specified line does not match to an address;
 
-                                printf("[X] Address for corresponding line is not found\n");
+                                log.Print("[X] Address for corresponding line is not found\n");
                                 continue;
                             }
                             if(place_breakpoint(debug, list, address) < 0) continue;
@@ -668,13 +668,13 @@ int mainloop(Debug& debug){
                     }
                 }else {
 
-                    printf("[X] Debug information not available\n");
+                    log.Print("[X] Debug information not available\n");
                     continue;
                 }
             }
             else{
 
-                printf("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
                 continue;
             }
         }
@@ -686,16 +686,16 @@ int mainloop(Debug& debug){
 
                 if(commands.size() <= 1){
 
-                    printf("\t[!] Enter memory address to place a breakpoint >");
+                    log.Print("\t[!] Enter memory address to place a breakpoint >");
                     if(!std::getline(std::cin, word)){
 
-                        fprintf(stderr, "[X] IO error\n");
+                        log.Error("[X] IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
 
-                        printf("[X] Invalid memory address\n");
+                        log.Print("[X] Invalid memory address\n");
                         continue;
                     }
 
@@ -707,11 +707,11 @@ int mainloop(Debug& debug){
                         address = std::stoll(word, nullptr, 16);
                     }catch(std::invalid_argument& err_1){
 
-                        fprintf(stderr, "[X] Invalid memory address :: %s\n", err_1.what());
+                        log.Error("[X] Invalid memory address :: %s\n", err_1.what());
                         continue;
                     }catch(std::out_of_range& err_2){
 
-                        fprintf(stderr, "[X] Invalid range :: %s\n", err_2.what());
+                        log.Error("[X] Invalid range :: %s\n", err_2.what());
                         continue;
                     }
                     if(place_breakpoint(debug, list, address) < 0) continue;
@@ -729,11 +729,11 @@ int mainloop(Debug& debug){
                             address = std::stoll(commands[i], nullptr, 16);
                         }catch(std::out_of_range& err_1){
 
-                            fprintf(stderr, "[X] Invalid range :: %s\n", err_1.what());
+                            log.Error("[X] Invalid range :: %s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
 
-                            fprintf(stderr, "[X] Invalid memory address :: %s\n", err_2.what());
+                            log.Error("[X] Invalid memory address :: %s\n", err_2.what());
                             continue;
                         }
                         if(place_breakpoint(debug, list, address) < 0) continue;
@@ -742,7 +742,7 @@ int mainloop(Debug& debug){
             }
             else{
 
-                printf("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
                 continue;
             }
         }
@@ -753,7 +753,7 @@ int mainloop(Debug& debug){
             }
             else {
 
-                printf("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
                 continue; 
             }
         }
@@ -762,16 +762,16 @@ int mainloop(Debug& debug){
 
             if(commands[1].empty()){
 
-                fprintf(stderr, "\t[!] Enter breakpoint number to remove");
+                log.Error("\t[!] Enter breakpoint number to remove");
                 if(!std::getline(std::cin, word)){
 
-                    fprintf(stderr, "[X] IO error\n");
+                    log.Error("[X] IO error\n");
                     return -1;
                 }
 
                 if(word.empty()){
 
-                    fprintf(stderr, "[X] Invalid breakpoint number\n");
+                    log.Error("[X] Invalid breakpoint number\n");
                     return -1;
                 }
 
@@ -780,11 +780,11 @@ int mainloop(Debug& debug){
                     list.remove_element(std::stoi(word, nullptr, 10));
                 }catch (std::out_of_range& err_1) {
 
-                    fprintf(stderr, "[X] Invalid range :: %s\n", err_1.what());
+                    log.Error("[X] Invalid range :: %s\n", err_1.what());
                     continue;
                 }catch (std::invalid_argument& err_2) {
 
-                    fprintf(stderr, "[X] Invalid address or line number :: %s\n", err_2.what());
+                    log.Error("[X] Invalid address or line number :: %s\n", err_2.what());
                     continue;
                 }
 
@@ -798,11 +798,11 @@ int mainloop(Debug& debug){
                         list.remove_element(std::stoi(commands[i], nullptr, 10));
                     }catch (std::out_of_range& err_1) {
 
-                        fprintf(stderr, "[X] Invalid range\n");
+                        log.Error("[X] Invalid range\n");
                         continue;
                     }catch (std::invalid_argument& err_2){
 
-                        fprintf(stderr, "[X] Invali address or line number\n");
+                        log.Error("[X] Invali address or line number\n");
                         continue;
                     }
                 }
@@ -815,31 +815,31 @@ int mainloop(Debug& debug){
 
                 if(commands.size() == 1){
 
-                    printf("[!] Enter register name >");
+                    log.Print("[!] Enter register name >");
                     if(!std::getline(std::cin, word)){
 
-                        fprintf(stderr, "[X] IO error ::\n");
+                        log.Error("[X] IO error ::\n");
                         return -1;
                     }
 
                     if(word.empty()){
 
-                        printf("Invalid register name\n");
+                        log.Print("Invalid register name\n");
                         continue;
                     }
 
                     std::string regname = word;
 
-                    printf("[!] Enter value >");
+                    log.Print("[!] Enter value >");
                     if(!std::getline(std::cin, word)){
 
-                        fprintf(stderr, "[X] IO error\n");
+                        log.Error("[X] IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
 
-                        printf("Invalid value\n");
+                        log.Print("Invalid value\n");
                         continue;
                     }
 
@@ -849,27 +849,27 @@ int mainloop(Debug& debug){
                         value = std::stoll(word, nullptr, 16);
                     }catch (std::out_of_range& err_1){
 
-                        printf("Invalid range :: %s\n", err_1.what());
+                        log.Print("Invalid range :: %s\n", err_1.what());
                         continue;
                     }catch (std::invalid_argument& err_2){
 
-                        printf("Invalid value ::%s\n", err_2.what());
+                        log.Print("Invalid value ::%s\n", err_2.what());
                         continue;
                     }
                     if(set_register(debug, regs, regname, value) < -1) return -1;
                 }
                 else if(commands.size() == 2){
 
-                    printf("Enter value >");
+                    log.Print("Enter value >");
                     if(!std::getline(std::cin, word)){
 
-                        fprintf(stderr, "[X] IO error");
+                        log.Error("[X] IO error");
                         return -1;
                     }
 
                     if(word.empty()){
 
-                        printf("[X] Invalid value");
+                        log.Print("[X] Invalid value");
                         continue;
                     }
 
@@ -879,11 +879,11 @@ int mainloop(Debug& debug){
                         value = std::stoll(word, nullptr, 16);
                     }catch (std::out_of_range& err_1){
 
-                        printf("Invalid range :: %s\n", err_1.what());
+                        log.Print("Invalid range :: %s\n", err_1.what());
                         continue;
                     }catch (std::invalid_argument& err_2){
 
-                        printf("Invalid value ::%s\n", err_2.what());
+                        log.Print("Invalid value ::%s\n", err_2.what());
                         continue;
                     }
                     if(set_register(debug, regs, commands[1], value) < 0) return -1;
@@ -897,17 +897,17 @@ int mainloop(Debug& debug){
                         value = std::stoll(commands[2], nullptr, 16);
                     }catch(std::out_of_range& err_1){
 
-                        printf("Invalid range :: %s\n", err_1.what());
+                        log.Print("Invalid range :: %s\n", err_1.what());
                         continue;
                     }catch(std::invalid_argument& err_2){
-                        printf("[X] Invalid argument :: %s\n", err_2.what());
+                        log.Print("[X] Invalid argument :: %s\n", err_2.what());
                         continue;
                     }
                     if(set_register(debug, regs, commands[1], value) < 0) return -1;
                 }
             }else{
 
-                printf("[X] Program is not running");
+                log.Print("[X] Program is not running");
                 continue;
             }
         }
@@ -915,16 +915,16 @@ int mainloop(Debug& debug){
 
             if(commands.size() < 2){
 
-                fprintf(stderr, "\t[!] Enter breakpoint number to disable");
+                log.Error("\t[!] Enter breakpoint number to disable");
                 if(!std::getline(std::cin, word)){
 
-                    fprintf(stderr, "[X] IO error\n");
+                    log.Error("[X] IO error\n");
                     return -1;
                 }
 
                 if(word.empty()){
 
-                    fprintf(stderr, "[X] Invalid breakpoint number\n");
+                    log.Error("[X] Invalid breakpoint number\n");
                     return -1;
                 }
                 //check errors
@@ -941,11 +941,11 @@ int mainloop(Debug& debug){
                             continue;
                     }catch (std::out_of_range& err_1) {
 
-                        fprintf(stderr, "[X] Invalid range\n");
+                        log.Error("[X] Invalid range\n");
                         continue;
                     }catch (std::invalid_argument& err_2) {
 
-                        fprintf(stderr, "[X] Invalid address or line number\n");
+                        log.Error("[X] Invalid address or line number\n");
                         continue;
                     }
                 }
@@ -956,11 +956,11 @@ int mainloop(Debug& debug){
  
             if(commands[1].empty()){
 
-                printf("\t[!] Enter a register > ");
+                log.Print("\t[!] Enter a register > ");
                 std::getline(std::cin, word);
                 if(word.empty()){
 
-                    fprintf(stderr, "[X] Invalid register\n");
+                    log.Error("[X] Invalid register\n");
                     continue;
                 }
                 else{
@@ -988,14 +988,14 @@ int mainloop(Debug& debug){
                 try{
 
                     number_of_steps = std::stoi(commands[1], nullptr, 10);
-                    printf("%d\n", number_of_steps);
+                    log.Print("%d\n", number_of_steps);
                 }catch (std::out_of_range& err_1){
 
-                    fprintf(stderr, "[X] Invalid range\n");
+                    log.Error("[X] Invalid range\n");
                     continue;
                 }catch (std::invalid_argument& err_2){
 
-                    fprintf(stderr, "[X] Invalid address or line number\n");
+                    log.Error("[X] Invalid address or line number\n");
                     continue;
                 }
 
@@ -1004,7 +1004,7 @@ int mainloop(Debug& debug){
 
                     if(debug.get_pathname() == nullptr && debug.get_pid() != 0){
 
-                        printf("[!] Press any key to exit zkz > ");
+                        log.Print("[!] Press any key to exit zkz > ");
                         getchar();
                         return EXIT_STATUS;
                     }
@@ -1023,7 +1023,7 @@ int mainloop(Debug& debug){
 
                     if(debug.get_pathname() == nullptr && debug.get_pid() != 0){
 
-                        printf("[!] Press any key to exit zkz > ");
+                        log.Print("[!] Press any key to exit zkz > ");
                         getchar();
                         return EXIT_STATUS;
                     }
@@ -1051,15 +1051,15 @@ int mainloop(Debug& debug){
 
         else if(command.compare("exit") == 0){
 
-            printf("[!] Do you want to kill the process? [yes/no] ");
+            log.Print("[!] Do you want to kill the process? [yes/no] ");
             if(!std::getline(std::cin, word)){
 
-                fprintf(stderr, "IO error\n");
+                log.Error("IO error\n");
                 return -1;
             }
             if(word.empty()){
 
-                printf("Assumed [no]\n");
+                log.Print("Assumed [no]\n");
                 continue;
             }
             if(word.compare("yes") == 0 || word.compare("y") == 0){
@@ -1083,7 +1083,7 @@ int attach_process(Debug& debug){
     if(debug.get_pid() != 0){
         if(ptrace(PTRACE_ATTACH, debug.get_pid(), nullptr, nullptr) < 0){
 
-            perror("ptrace error");
+            log.PError("ptrace error");
             return -1;
         }
 
@@ -1120,10 +1120,10 @@ int main(int argc, char *argv[]){
     struct user_regs_struct regs;
     if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, &regs) < 0){
 
-        perror("[X] Ptrace error :");
+        log.PError("[X] Ptrace error :");
         return -1;
     }
-    printf("[zkz] Started debugging\trip : %llx\n", regs.rip);
+    log.Print("[zkz] Started debugging\trip : %llx\n", regs.rip);
     if(mainloop(debug) < 0) return -1;
     return 0;
 }

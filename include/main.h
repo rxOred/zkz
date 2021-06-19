@@ -6,6 +6,9 @@
 #include "libelfin/elf/elf++.hh"
 #include "libelfin/dwarf/dwarf++.hh"
 #include "libelfin/dwarf/data.hh"
+#include "log.h"
+
+static Log log;
 
 class Debug{
 
