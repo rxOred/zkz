@@ -6,3 +6,4 @@ Debug/*
 a.out
 *.json
 Debug
+.cache/
