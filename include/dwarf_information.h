@@ -7,22 +7,15 @@
 #include <sys/types.h>
 #include <vector>
 
-/* NOTE each of these represent a compilation_unit */
-typedef struct {
-
-    dwarf::compilation_unit *cu;
-    int unit_number;
-} Cuinfo;
-
 /* NOTE each of these represent a line and its corresponding address, compilation_unit */
 class Lineinfo{
 
     public:
-        int line_number;
-        uint64_t address;
-        Cuinfo cuinfo;
+        int m_line_number;
+        uint64_t m_address;
+        int m_unit_number;
 
-        Lineinfo(int line_number, uint64_t address, int unit_number, dwarf::compilation_unit *cu);
+        Lineinfo(int line_number, uint64_t address, int unit_number);
 };
 
 /* NOTE if init_debug_lines fails, do not end the process */
@@ -33,13 +26,29 @@ class DebugLineInfo{
         std::vector<Lineinfo*> D_lines;
 
     public:
-        int init_debug_lines(Debug& debug);
-        int parse_lines(Debug& debug);
-        void append_element(int line_number, uint64_t address, int unit_number, dwarf::compilation_unit *cu);
-        uint64_t get_address_by_index(int index);
-        uint64_t get_address_by_line(int compilation_unit, int line_number);
-        uint64_t get_base_addr(pid_t pid);
-        int get_number_of_compilation_units(void);
-        int get_max_line_number(int compilation_unit);
-        int list_src_lines(int compilation_unit);
+        bool b_dwarf_state;
+
+        DebugLineInfo()
+            :b_dwarf_state(true) {}
+
+        ~DebugLineInfo(){
+
+            for(auto x = D_lines.begin(); x != D_lines.end(); x++){
+
+                delete((*x));
+            }
+            D_lines.clear();
+        }
+
+        //int InitDebugLines(Debug& debug);
+        //void ParseLines(Debug& debug, const::dwarf::line_table &lt, uint64_t base_addr, int unit_number);
+        void AppendElement(int line_number, uint64_t address, int unit_number);
+        uint64_t GetElementByIndex(int index);
+        uint64_t GetAddressByLine(int compilation_unit, int line_number);
+        uint64_t GatBaseAddress(pid_t pid);
+        int GetNoOfCompilationUnits(void);
+        int GetMaxLineNumber(int compilation_unit);
+        int GetMinLineNumber(int compilation_unit);
+        int ListSrcLines(int compilation_unit);
 };
+

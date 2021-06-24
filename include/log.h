@@ -1,7 +1,10 @@
 #pragma once
 
 #include <bits/stdint-uintn.h>
+#include <cstdio>
 #include <iostream>
+#include <cstdarg>
+#include <cstring>
 
 #define PRINT (1 << 0)
 #define ERROR (1 << 1)
@@ -22,39 +25,288 @@ class Log {
             return (m_state & state);
         }
 
-        void Print(const char *msg) {
-            if(CheckState(PRINT))
-                std::cout << msg << std::endl;
+        Log(){
+
+            m_state = PRINT | ERROR | PERROR;
+        }
+        Log(uint8_t state){
+
+            m_state = state;
         }
 
-        void Error(const char *error) {
-            if(CheckState(ERROR))
-                std::cerr << "[ERROR] " << error << std::endl;
+        void Print(const char *msg, ...) {
+            if(CheckState(PRINT)){
+
+                va_list arg;
+                va_start(arg, msg);
+
+                for(int i = 0; i < strlen(msg); i++){
+
+                    if(msg[i] == '%'){
+                        i++;
+                        switch(msg[i]){
+
+                            case 'd':
+                                {
+                                    int d = va_arg(arg, int);
+                                    char number[10];
+                                    sprintf(number, "%d", d);
+                                    printf("%s", number);
+                                    break;
+                                }
+                            case 's':
+                                {
+                                    char *s = va_arg(arg, char *);
+                                    for(int j = 0; j < strlen(s); j++){
+
+                                        putchar(s[j]);
+                                    }
+                                    break;
+                                }
+
+                            case 'x':
+                                {
+                                    uint64_t p = va_arg(arg, unsigned long long);
+                                    char hex_str[16];
+                                    sprintf(hex_str, "%lX", p);
+                                    putchar('0');
+                                    putchar('x');
+                                    for(int j = 0; j < strlen(hex_str); j++){
+
+                                        putchar(hex_str[j]);
+                                    }
+                                }
+                        }
+                    }else{
+
+                        putchar(msg[i]);
+                    }
+                }
+            }
         }
 
-        void PError(const char *_perror) {
-            if(CheckState(PERROR))
-                perror(_perror);
+        void Error(const char *error, ...) {
+            if(CheckState(ERROR)){
+
+                va_list arg;
+                va_start(arg, error);
+
+                printf("[ERROR]");
+                for(int i = 0; i < strlen(error); i++){
+
+                    if(error[i] == '%'){
+                        i++;
+                        switch(error[i]){
+
+                            case 'd':
+                                {
+                                    int d = va_arg(arg, int);
+                                    char number[10];
+                                    sprintf(number, "%d", d);
+                                    printf("%s", number);
+                                    break;
+                                }
+                            case 's':
+                                {
+                                    char *s = va_arg(arg, char *);
+                                    for(int j = 0; j < strlen(s); j++){
+
+                                        putchar(s[j]);
+                                    }
+                                    break;
+                                }
+
+                            case 'x':
+                                {
+                                    uint64_t p = va_arg(arg, unsigned long long);
+                                    char hex_str[16];
+                                    sprintf(hex_str, "%lX", p);
+                                    putchar('0');
+                                    putchar('x');
+                                    for(int j = 0; j < strlen(hex_str); j++){
+
+                                        putchar(hex_str[j]);
+                                    }
+                                }
+                        }
+                    }else{
+
+                        putchar(error[i]);
+                    }
+                }
+            }
         }
 
-        void Warn(const char *warning) {
-            if(CheckState(WARN))
-                std::cout << "[WARNING] " << warning << std::endl;
+        void PError( const char *_perror) {
+            if(CheckState(PERROR)){
+
+                char string[strlen(_perror) + 8];
+                sprintf(string, "%s %s", "[ERROR]", _perror);
+                perror(string);
+            }
         }
 
-        void Info(const char *info) {
-            if(CheckState(INFO))
-                std::cout << "[INFO] " << info << std::endl;
+        void Warn(const char *warning, ...) {
+            if(CheckState(WARN)){
+
+                va_list arg;
+                va_start(arg, warning);
+
+                printf("[WARNING] ");
+                for(int i = 0; i < strlen(warning); i++){
+
+                    if(warning[i] == '%'){
+                        i++;
+                        switch(warning[i]){
+
+                            case 'd':
+                                {
+                                    int d = va_arg(arg, int);
+                                    char number[10];
+                                    sprintf(number, "%d", d);
+                                    printf("%s", number);
+                                    break;
+                                }
+                            case 's':
+                                {
+                                    char *s = va_arg(arg, char *);
+                                    for(int j = 0; j < strlen(s); j++){
+
+                                        putchar(s[j]);
+                                    }
+                                    break;
+                                }
+
+                            case 'x':
+                                {
+                                    uint64_t p = va_arg(arg, unsigned long long);
+                                    char hex_str[16];
+                                    sprintf(hex_str, "%lX", p);
+                                    putchar('0');
+                                    putchar('x');
+                                    for(int j = 0; j < strlen(hex_str); j++){
+
+                                        putchar(hex_str[j]);
+                                    }
+                                }
+                        }
+                    }else{
+
+                        putchar(warning[i]);
+                    }
+                }
+
+            }
         }
 
-        void Debug(const char *debug) {
-            if(CheckState(DEBUG))
-                std::cout << "[DEBUG]" << debug << std::endl;
+        void Info(const char *info, ...) {
+            if(CheckState(INFO)){
+
+                va_list arg;
+                va_start(arg, info);
+
+                printf("[INFO] ");
+                for(int i = 0; i < strlen(info); i++){
+
+                    if(info[i] == '%'){
+                        i++;
+                        switch(info[i]){
+
+                            case 'd':
+                                {
+                                    int d = va_arg(arg, int);
+                                    char number[10];
+                                    sprintf(number, "%d", d);
+                                    printf("%s", number);
+                                    break;
+                                }
+                            case 's':
+                                {
+                                    char *s = va_arg(arg, char *);
+                                    for(int j = 0; j < strlen(s); j++){
+
+                                        putchar(s[j]);
+                                    }
+                                    break;
+                                }
+
+                            case 'x':
+                                {
+                                    uint64_t p = va_arg(arg, unsigned long long);
+                                    char hex_str[16];
+                                    sprintf(hex_str, "%lX", p);
+                                    putchar('0');
+                                    putchar('x');
+                                    for(int j = 0; j < strlen(hex_str); j++){
+
+                                        putchar(hex_str[j]);
+                                    }
+                                }
+                        }
+                    }else{
+
+                        putchar(info[i]);
+                    }
+                }
+            }
         }
 
-        void Prompt(const char *prompt) {
-            if(CheckState(PROMPT))
-                std::cout << prompt << ">" << std::endl;
+        void Debug(const char *debug, ...) {
+            if(CheckState(DEBUG)){
+
+                va_list arg;
+                va_start(arg, debug);
+
+                printf("[DEBUG] ");
+                for(int i = 0; i < strlen(debug); i++){
+
+                    if(debug[i] == '%'){
+                        i++;
+                        switch(debug[i]){
+
+                            case 'd':
+                                {
+                                    int d = va_arg(arg, int);
+                                    char number[10];
+                                    sprintf(number, "%d", d);
+                                    printf("%s", number);
+                                    break;
+                                }
+                            case 's':
+                                {
+                                    char *s = va_arg(arg, char *);
+                                    for(int j = 0; j < strlen(s); j++){
+
+                                        putchar(s[j]);
+                                    }
+                                    break;
+                                }
+
+                            case 'x':
+                                {
+                                    uint64_t p = va_arg(arg, unsigned long long);
+                                    char hex_str[16];
+                                    sprintf(hex_str, "%lX", p);
+                                    putchar('0');
+                                    putchar('x');
+                                    for(int j = 0; j < strlen(hex_str); j++){
+
+                                        putchar(hex_str[j]);
+                                    }
+                                }
+                        }
+                    }else{
+
+                        putchar(debug[i]);
+                    }
+                }
+            }
+        }
+
+        void Prompt(const char *prompt, ...) {
+            if(CheckState(PROMPT)){
+                printf("%s> ", prompt);
+            }
         }
 
     private:

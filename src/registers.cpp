@@ -6,16 +6,16 @@
 #include <cstdio>
 #include <stdlib.h>
 
-int info_registers_all(Debug& debug, struct user_regs_struct& regs){
+int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
 
-   if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, &regs) < 0){
+   if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, &regs) < 0){
 
        perror("[X] Ptrace error");
        return -1;
     }
-    printf("Info registers :\n\tRAX: 0x%llx\n\tRCX: 0x%llx\n\tRDX: 0x%llx\n\tRBX: 0x%llx\n\tRSP: "
-          "0x%llx\n\tRBP: 0x%llx\n\tRSI: 0x%llx\n\tRDI: 0x%llx\n\tR8: 0x%llx\n\tR9: 0x%llx\n\tR10: "
-          "0x%llx\n\tR11: 0x%llx\n\tR12: 0x%llx\n\tR13: 0x%llx\n\tR14: 0x%llx\nR15: 0x%llx\n", 
+    log.Print("Info registers :\n\tRAX: %llx\n\tRCX: %llx\n\tRDX: %llx\n\tRBX: %llx\n\tRSP: "
+          "%x\n\tRBP: %x\n\tRSI: %x\n\tRDI: %x\n\tR8: %x\n\tR9: %x\n\tR10: "
+          "%x\n\tR11: %x\n\tR12: %x\n\tR13: %x\n\tR14: %x\nR15: %x\n", 
           regs.rax, regs.rcx, regs.rdx, regs.rbx, regs.rsp, regs.rbp, regs.rsi, regs.rdi, 
           regs.r8, regs.r9, regs.r10, regs.r11, regs.r12, regs.r13, regs.r14, regs.r15);
 
@@ -39,9 +39,9 @@ int info_registers_all(Debug& debug, struct user_regs_struct& regs){
 #define R14     regs.r14
 #define R15     regs.r15
 
-int info_register(Debug& debug, struct user_regs_struct& regs, std::string reg){
+int InfoRegister(Debug& debug, struct user_regs_struct& regs, std::string reg){
 
-    std::map<unsigned long long int, std::string> registers = {
+    static std::map<unsigned long long int, std::string> registers = {
         {RAX, "rax"}, {RCX, "rcx"}, {RDX,"rdx"}, 
         {RBX, "rbx"}, {RSP, "rsp"}, {RBP,"rbp"},
         {RSI, "rsi"}, {RDI, "rdi"}, {R8, "r8"}, 
@@ -52,24 +52,26 @@ int info_register(Debug& debug, struct user_regs_struct& regs, std::string reg){
 
     std::map<unsigned long long int, std::string>::iterator cursor;
 
-    if(ptrace(PTRACE_GETREGS, debug.get_pid(), nullptr, regs) < 0){
+    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, regs) < 0){
 
-        perror("[X] Ptrace failed");
+        log.PError("Ptrace failed");
         return -1;
     }
     for (cursor = registers.begin(); cursor != registers.end(); cursor++){
 
         if(!cursor->second.compare(reg)){
 
-            fprintf(stdout, "info %s :%llx\n", cursor->second.c_str(), cursor->first);
+            log.Print("info %s :%x\n", cursor->second.c_str(), cursor->first);
         }
     }
+
+    //registers.clear();
     return 0;
 }
 
-int set_register(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value){
+int SetRegister(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value){
 
-    std::vector<std::string> registers = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
+    static std::vector<std::string> registers = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
 
     for(int i = 0; i < registers.size(); i++){
 
@@ -142,15 +144,16 @@ int set_register(Debug& debug, struct user_regs_struct& regs, std::string reg, u
                 break;
             }
 
-            if(ptrace(PTRACE_SETREGS, debug.get_pid(), nullptr, &regs) < 0){
+            if(ptrace(PTRACE_SETREGS, debug.GetPid(), nullptr, &regs) < 0){
 
-                perror("[X] Ptrace error");
+                log.PError("Ptrace error");
                 return -1;
             }
 
             return 0;
         }
     }
-    printf("Invalid register name\n");
+    //registers.clear();
+    log.Error("Invalid register name\n");
     return 0;
 }

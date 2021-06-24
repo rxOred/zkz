@@ -8,6 +8,6 @@
 #include <sys/user.h>
 #include <map>
 
-int info_registers_all(Debug& debug, struct user_regs_struct& regs);
-int info_register(Debug& debug, struct user_regs_struct& regs, std::string reg);
-int set_register(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value);
+int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs);
+int InfoRegister(Debug& debug, struct user_regs_struct& regs, std::string reg);
+int SetRegister(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value);

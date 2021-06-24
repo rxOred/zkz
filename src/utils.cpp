@@ -4,18 +4,18 @@
 #include <string.h>
 #include "main.h"
 
-void print_help(void){
+void PrintHelp(void){
 
     //print information
 }
 
-void print_usage(void){
+void PrintUsage(void){
 
     //free memory and exit
     log.Print("something\n");
 }
 
-void parse_arguments(Debug& debug, int argc, char *argv[]){
+void ParseArguments(Debug& debug, int argc, char *argv[]){
 
     for(int i = 1; i < argc; i++){
 
@@ -31,7 +31,7 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
                 pathname = (char **)realloc(pathname, sizeof(char **) * (count + 2));
                 if(!pathname){
 
-                    log.PError("[X] Memory allocation error :: ");
+                    log.PError("Memory allocation error");
                     exit(EXIT_FAILURE);
                 }
  
@@ -40,7 +40,8 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
             }
 
             pathname[count] = nullptr;
-            debug.set_pathname(pathname);
+            debug.SetPathname(pathname);
+            debug.SetCount(count);
             i = j - 1;      // j - 1 because we loop to the next flag too
         }
         else if(strcmp(argv[i], "-p") == 0){
@@ -48,23 +49,23 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
             i++;
             if(!argv[i] || i == argc) {
 
-                log.Error("[X] Expected a process id\n");
-                print_usage();     /* user have to specify a process id */
+                log.Error("Expected a process id\n");
+                PrintUsage();     /* user have to specify a process id */
                 exit(EXIT_FAILURE);
             }
-            else debug.set_pid(atoi(argv[i]));
+            else debug.SetPid(atoi(argv[i]));
         }
         else if(strcmp(argv[i], "-s") == 0){
 
             i++;
             if(i == argc || !argv[i]){
 
-                print_usage();
+                PrintUsage();
                 exit(EXIT_FAILURE);
             }
             if(atoi(argv[i]) > 0){
 
-                debug.set_systrace();
+                debug.SetSystrace();
             }
         }
         else if(strcmp(argv[i], "-i") == 0){
@@ -72,17 +73,17 @@ void parse_arguments(Debug& debug, int argc, char *argv[]){
             i++;
             if(i == argc || !argv[i]) {
 
-                print_usage();
+                PrintUsage();
                 exit(EXIT_FAILURE);
             }
             if(atoi(argv[i]) > 0){
 
-                debug.set_inforeg();
+                debug.SetInforeg();
             }
         }
         else{
 
-            print_usage();
+            PrintUsage();
             exit(EXIT_FAILURE);
         }
     }

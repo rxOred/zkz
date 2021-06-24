@@ -8,7 +8,7 @@
 #include "libelfin/dwarf/data.hh"
 #include "log.h"
 
-static Log log;
+static Log log(DEBUG | PRINT | PROMPT | ERROR | INFO | PERROR);
 
 class Debug{
 
@@ -17,38 +17,39 @@ class Debug{
             struct {
                 pid_t pid;
                 char **pathname;    //free this
-            }u_dbg;
+                int count;
+            }m_dbg;
 
             bool is_systrace;   // should we stop and wait for user in every syscall invocation of debugee?
-            bool is_inforeg;    // shoudl we print register infomation on every stop of debugging process?
-        } arguments;
+            bool b_is_inforeg;    // shoudl we print register infomation on every stop of debugging process?
+        } m_arguments;
 
-        bool is_running;
-        bool is_sys_stopped;    // to implement system call tracing + inspection
+        bool b_is_running;
+        bool b_is_sys_stopped;    // to implement system call tracing + inspection
 
     public:
 
-        struct{
-            elf::elf elf;
-            dwarf::dwarf dwarf;
-        } sourceifo;
-
+        /* NOTE this wastes memory, yeah*/
 
         Debug();
 
-        void set_systrace(void);    // set is_systrace (once these are true, cannot be undone
-        void set_inforeg(void);     // set is_inforeg
-        void set_pid(pid_t pid);    // set process id to debugee's
-        void set_pathname(char **pathname);     // set pathname of debugee if we are forking it
+        ~Debug();
+
+        void SetSystrace(void);    // set is_systrace (once these are true, cannot be undone
+        void SetInforeg(void);     // set is_inforeg
+        void SetPid(pid_t pid);    // set process id to debugee's
+        void SetPathname(char **pathname);     // set pathname of debugee if we are forking it
+        void SetCount(int count);
         /* int open_elf(const char *filename);
         void set_sourceifo(int file_descriptor); */
-        void set_program_state(bool state);     // set is_runiing
-        void set_syscall_state(bool state);     // set is_sys_stopped
+        void SetProgramState(bool state);     // set is_runiing
+        void SetSyscallState(bool state);     // set is_sys_stopped
 
-        bool get_systrace(void) const;
-        bool get_inforeg(void) const;
-        pid_t get_pid(void) const;
-        char **get_pathname(void) const;
-        bool get_program_state(void) const;
-        bool get_syscall_state(void) const;
+        bool GetSystrace(void) const;
+        bool GetInforeg(void) const;
+        pid_t GetPid(void) const;
+        char **GetPathname(void) const;
+        int GetCount(void) const;
+        bool GetProgramState(void) const;
+        bool GetSyscallState(void) const;
 };

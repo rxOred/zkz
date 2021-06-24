@@ -3,70 +3,89 @@
 
 Debug::Debug(){
  
-    this->arguments.u_dbg.pathname = nullptr;
-    this->arguments.u_dbg.pid = 0;
-    this->arguments.is_inforeg = false;
-    this->arguments.is_systrace = false;
-    this->is_running = false;
-    this->is_sys_stopped = false;
+    m_arguments.m_dbg.pathname = nullptr;
+    m_arguments.m_dbg.pid = 0;
+    m_arguments.b_is_inforeg = false;
+    m_arguments.is_systrace = false;
+    b_is_running = false;
+    b_is_sys_stopped = false;
 }
 
-void Debug::set_systrace(void){
+Debug::~Debug(){
 
-    this->arguments.is_systrace = true;
+    int count = GetCount();
+    for(int i = 0; i < count; i++){
+ 
+        free(m_arguments.m_dbg.pathname + i);
+    }
 }
 
-void Debug::set_inforeg(void){
+void Debug::SetSystrace(void){
 
-    this->arguments.is_inforeg = true;
+    m_arguments.is_systrace = true;
 }
 
-void Debug::set_pid(pid_t pid){
+void Debug::SetInforeg(void){
 
-    this->arguments.u_dbg.pid = pid;
+    m_arguments.b_is_inforeg = true;
 }
 
-void Debug::set_pathname(char **pathname){
+void Debug::SetPid(pid_t pid){
 
-    this->arguments.u_dbg.pathname = pathname;
+    this->m_arguments.m_dbg.pid = pid;
 }
 
-void Debug::set_program_state(bool state){
+void Debug::SetPathname(char **pathname){
 
-    this->is_running = state;
+    this->m_arguments.m_dbg.pathname = pathname;
 }
 
-void Debug::set_syscall_state(bool state){
+void Debug::SetCount(int count){
 
-    this->is_sys_stopped = state;
+    this->m_arguments.m_dbg.count = count;
 }
 
-bool Debug::get_systrace(void) const{
+void Debug::SetProgramState(bool state){
 
-    return this->arguments.is_systrace;
+    b_is_running = state;
 }
 
-bool Debug::get_inforeg(void) const{
+void Debug::SetSyscallState(bool state){
 
-    return this->arguments.is_inforeg;
+    b_is_sys_stopped = state;
 }
 
-pid_t Debug::get_pid(void) const{
+bool Debug::GetSystrace(void) const{
 
-    return this->arguments.u_dbg.pid;
+    return m_arguments.is_systrace;
 }
 
-char **Debug::get_pathname(void) const{
+bool Debug::GetInforeg(void) const{
 
-    return this->arguments.u_dbg.pathname;
+    return m_arguments.b_is_inforeg;
 }
 
-bool Debug::get_program_state(void) const{
+pid_t Debug::GetPid(void) const{
 
-    return this->is_running;
+    return m_arguments.m_dbg.pid;
 }
 
-bool Debug::get_syscall_state(void) const{
+char **Debug::GetPathname(void) const{
 
-    return this->is_sys_stopped;
+    return m_arguments.m_dbg.pathname;
+}
+
+int Debug::GetCount(void) const{
+
+    return m_arguments.m_dbg.count;
+}
+
+bool Debug::GetProgramState(void) const{
+
+    return b_is_running;
+}
+
+bool Debug::GetSyscallState(void) const{
+
+    return b_is_sys_stopped;
 }

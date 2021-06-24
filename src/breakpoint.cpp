@@ -2,67 +2,72 @@
 #include <stdlib.h>
 #include <vector>
 #include "breakpoint.h"
+#include "main.h"
 #include <cstdio>
 
 Breakpoint::Breakpoint(){
 
-    this->address = 0;
-    this->origdata = 0;
-    this->breakpoint_number = 0;
-    this->is_enabled = false;
+    this->m_address = 0;
+    this->m_origdata = 0;
+    this->m_breakpoint_number = 0;
+    this->b_is_enabled = false;
 }
 
 Breakpoint::Breakpoint(uint64_t address, uint64_t origdata, int breakpoint_number, bool is_enabled){
 
-    this->address = address;
-    this->origdata = origdata;
-    this->breakpoint_number = breakpoint_number;
-    this->is_enabled = is_enabled;
+    this->m_address = address;
+    this->m_origdata = origdata;
+    this->m_breakpoint_number = breakpoint_number;
+    this->b_is_enabled = is_enabled;
 }
 
-bool Breakpoint::get_state(void) const{
+bool Breakpoint::GetState(void) const{
 
-    return is_enabled;
+    return b_is_enabled;
 }
 
-void Breakpoint::disable_breakpoint(void){
+void Breakpoint::DisableBreakpoint(void){
 
-    this->is_enabled = false; 
+    this->b_is_enabled = false; 
 }
 
-void Breakpoint::enable_breakpoint(void){
+void Breakpoint::EnableBreakpoint(void){
 
-    this->is_enabled = true;
+    this->b_is_enabled = true;
 }
 
-BreakpointList::BreakpointList(){
+BreakpointList::~BreakpointList(){
 
-    std::vector<Breakpoint*> B_List;
+    for(auto x = B_List.begin(); x != B_List.end(); x++){
+
+        delete((*x));
+    }
+    B_List.clear();
 }
 
-int BreakpointList::get_number_of_breakpoints() const{
+int BreakpointList::GetNoOfBreakpoints() const{
 
     return B_List.size();
 }
 
-void BreakpointList::append_element(uint64_t address, uint64_t origdata){
+void BreakpointList::AppendElement(uint64_t address, uint64_t origdata){
 
-    Breakpoint *b = new Breakpoint{address, origdata, get_number_of_breakpoints() + 1, true};
-    b->enable_breakpoint();
+    Breakpoint *b = new Breakpoint{address, origdata, GetNoOfBreakpoints() + 1, true};
+    b->EnableBreakpoint();
 
     B_List.push_back(b);  
 }
 
-void BreakpointList::remove_element(int breakpoint_number){
+void BreakpointList::RemoveElement(int breakpoint_number){
 
-    if(breakpoint_number > get_number_of_breakpoints()){
+    if(breakpoint_number > GetNoOfBreakpoints()){
 
-        printf("[X] Invalid breakpoint number");
+        log.Error("Invalid breakpoint number");
         return;
     }
     for (auto x = B_List.begin(); x != B_List.end(); x++){
 
-        if((*x)->breakpoint_number == breakpoint_number){
+        if((*x)->m_breakpoint_number == breakpoint_number){
 
              delete (*x);
              B_List.erase(x);
@@ -73,26 +78,26 @@ void BreakpointList::remove_element(int breakpoint_number){
     return;
 }
 
-Breakpoint *BreakpointList::get_element_by_index(int index) {
+Breakpoint *BreakpointList::GetElementByIndex(int index) {
 
-    if(index > get_number_of_breakpoints()){
+    if(index > GetNoOfBreakpoints()){
 
-        printf("[X] Invalid index");
+        log.PError("Invalid index");
         return nullptr;
     }
     return B_List[index];
 }
 
-Breakpoint *BreakpointList::get_element_by_breakpoint_number(int breakpoint_number){
+Breakpoint *BreakpointList::GetElementByBreakpointNumber(int breakpoint_number){
 
-    if(breakpoint_number > get_number_of_breakpoints()){
+    if(breakpoint_number > GetNoOfBreakpoints()){
 
-        printf("[X] Invalid breakpoint number");
+        log.Error("Invalid breakpoint number");
         return nullptr;
     }
     for (auto x = B_List.begin(); x != B_List.end(); x++){
 
-        if((*x)->breakpoint_number == breakpoint_number){
+        if((*x)->m_breakpoint_number == breakpoint_number){
 
             return (*x);
         }
@@ -100,11 +105,11 @@ Breakpoint *BreakpointList::get_element_by_breakpoint_number(int breakpoint_numb
     return nullptr;
 }
 
-Breakpoint *BreakpointList::get_element_by_address(uint64_t address){
+Breakpoint *BreakpointList::GetElementByAddress(uint64_t address){
 
     for (auto x = B_List.begin(); x != B_List.end(); x++){
 
-        if((*x)->address == address){
+        if((*x)->m_address == address){
 
             return (*x);
         }
