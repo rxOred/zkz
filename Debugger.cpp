@@ -38,7 +38,7 @@ void kill_process(pid_t pid){
 
 int wait_for_process(Debug& debug){
 
-    int wstatus;
+    int wstatus = 0;
     waitpid(debug.GetPid(), &wstatus, 0);
 
     if(WIFEXITED(wstatus)){
@@ -53,7 +53,7 @@ int wait_for_process(Debug& debug){
     }
     else if(WIFSIGNALED(wstatus)){
 
-        log.Info("Process recieved a signal %d\n", wstatus);
+        log.Info("Process recieved a signal %d\n", wstatus /* replace this with signal */);
         return SIGNALED_STATUS;
     }
 
@@ -128,13 +128,6 @@ int _disable_breakpoint(BreakpointList& li, int breakpoint_number){
 
 /* to restore the instruction to its previous state before placing the breakpoint */
 int restore_breakpoint(Debug& debug, Breakpoint *b, struct user_regs_struct &regs, uint64_t address){
-
-
-    /* BUG */
-    /* Fix : when we hit a breapoint, next step or continue will call this function to remove int cc
-     * instruction. but here, we set int cc'ed address to orginal value and all that but we do not
-     * execute restored address, so we might need to reverse rip by 1 and execute that instruction and 
-     * then continur */
 
     log.Debug("restore address %x\n", address);
     if(ptrace(PTRACE_POKETEXT, debug.GetPid(), address, b->m_origdata) < 0){
@@ -488,39 +481,6 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
         }
 
         /* reset is used to restart a process, while it is still running or exited */
-        if(command.compare("reset") == 0){
-
-/* BUG there's a bug with reset */
-            if(break_list.GetNoOfBreakpoints() >= 1){
-
-                log.Prompt("[!] Do you want to keep breakpoints? [yes/no] ");
-                if(!std::getline(std::cin, word)){
-
-                    log.Error("IO error\n");
-                    return -1;
-                }
-
-                if(word.empty()){
-
-                    log.Print("Assumed [yes]...\nCleaning all breakpoints...\n");
-                    remove_all_breakpoints(debug, break_list);
-                }
-                if(word.compare("no") == 0 || word.compare("n") == 0){
-
-                    log.Print("Saving breakpoints...\n");
-                }
-                else if(word.compare("yes") == 0 || word.compare("y") == 0){
-
-                    log.Print("Cleaning all breakpoints...\n");
-                    remove_all_breakpoints(debug, break_list);
-                }
-            }
-            if(debug.GetPathname() != nullptr) {
-
-                start_process(debug);
-                continue;
-            }
-        }
         if(command.compare("run") == 0 || command.compare("r") == 0 || command.compare("continue") == 0 || command.compare("c") == 0){
 
             if(!debug.GetProgramState()){
@@ -677,7 +637,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                 }
             }else{
 
-                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running\n");
                 continue;
             }
         }
@@ -757,7 +717,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
             }
             else{
 
-                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running\n");
                 continue;
             }
         }
@@ -825,7 +785,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
             }
             else{
 
-                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running\n");
                 continue;
             }
         }
@@ -836,7 +796,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
             }
             else {
 
-                log.Print("[!] Process is not running, try restarting the process by 'reset'\n");
+                log.Print("[!] Process is not running\n");
                 continue;
             }
         }
@@ -1194,7 +1154,6 @@ int main(int argc, char *argv[]){
             else if(ret == -1) return -1;
         }
 
-        //------ 
         DebugLineInfo line_info;
 
         if(init_debug_lines(debug, line_info) < 0){
@@ -1202,8 +1161,6 @@ int main(int argc, char *argv[]){
             log.Error("Error reading dwarf information\n");
             line_info.b_dwarf_state = false;
         }
-
-        //------
 
         /* printing where rip is at */
         struct user_regs_struct regs;
