@@ -3,11 +3,12 @@
 #include <bits/stdint-uintn.h>
 #include <functional>
 #include <vector>
+#include "main.h"
 
 class Breakpoint{
 
     private:
-        bool b_is_enabled;
+        bool b_is_enabled;      // zkz will not stop at breakpoint if this is false, it will restore breakpoint instruction to its original instruction and continue execution
 
     public:
         uint64_t m_address;
@@ -31,8 +32,9 @@ class BreakpointList{
 
         int GetNoOfBreakpoints() const;
         void AppendElement(uint64_t address, uint64_t origdata);
-        void RemoveElement(int breakpoint_number);
-        Breakpoint *GetElementByIndex(int index);
-        Breakpoint *GetElementByBreakpointNumber(int breakpoint_number);
-        Breakpoint *GetElementByAddress(uint64_t addr);
+        int RemoveElement(Debug& debug, int breakpoint_number);
+        Breakpoint *GetElementByIndex(int index) const;
+        Breakpoint *GetElementByBreakpointNumber(int breakpoint_number) const;
+        Breakpoint *GetElementByAddress(uint64_t addr) const;
+        void ListBreakpoints(void) const;
 };

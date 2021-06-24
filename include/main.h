@@ -28,9 +28,6 @@ class Debug{
         bool b_is_sys_stopped;    // to implement system call tracing + inspection
 
     public:
-
-        /* NOTE this wastes memory, yeah*/
-
         Debug();
 
         ~Debug();

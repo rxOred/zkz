@@ -102,13 +102,13 @@ int start_process(Debug& debug){
     }return -1;
 }
 
-/* NOTE there is a memory error here when deleting all breakpoints, try valgrind on this */
 int remove_all_breakpoints(Debug& debug, BreakpointList& li){
 
     for (int i = 0; i < li.GetNoOfBreakpoints(); i++){
 
         /* chech errors properly */
-        li.RemoveElement(i + 1);
+        if(li.RemoveElement(debug, i + 1) < 0)
+            return -1;
     }
     return 0;
 }
@@ -164,12 +164,10 @@ int restore_breakpoint(Debug& debug, Breakpoint *b, struct user_regs_struct &reg
         log.Debug("process stopped or signled\n");
     }
 
-    /* NOTE do some log.Debug's to make sure we are doing it right */
     return 0;
 }
 
-
-/* NOTE there is a error here when placing breakpoints using line numbers */
+/* BUG (not sure though, i didnt checked that out :) )there is a error here when placing breakpoints using line numbers */
 int place_breakpoint(Debug& debug, BreakpointList& li, uint64_t address){
 
     uint64_t origdata = ptrace(PTRACE_PEEKTEXT, debug.GetPid(), address, nullptr);
@@ -179,7 +177,6 @@ int place_breakpoint(Debug& debug, BreakpointList& li, uint64_t address){
         log.PError("Ptrace error");
         return -1;
     }
-    li.AppendElement(address, origdata);
 
     uint64_t data_w_interrupt = ((origdata & 0xffffffffffffff00) | 0xcc);
     if(ptrace(PTRACE_POKETEXT, debug.GetPid(), address, data_w_interrupt) < 0){
@@ -187,7 +184,7 @@ int place_breakpoint(Debug& debug, BreakpointList& li, uint64_t address){
         log.PError("Ptrace error");
         return -1;
     }
-
+    li.AppendElement(address, origdata);
     log.Print("Breakpoint placed at address : %x\n", address);
     return 0;
 }
@@ -452,8 +449,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
     log.SetState(PRINT | PROMPT | WARN | INFO | DEBUG | PERROR | ERROR);
 
     struct user_regs_struct regs;   //for dumping registers
-    BreakpointList break_list;
-
+    BreakpointList li;
 
     int default_compilation_unit = 0;
 
@@ -492,7 +488,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                     continue;
                 }
             }
-            int ret = continue_execution(debug, break_list, regs);
+            int ret = continue_execution(debug, li, regs);
             if(ret == EXIT_STATUS){     // E  IT_STATUS defines exit of the debugee, but we dont have to care about setting program state because, wait_for_process is taking care of it
 
                 if(debug.GetPathname() == nullptr && debug.GetPid() != 0){    // because we cant start a process without knowning its pathname
@@ -576,6 +572,10 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                 log.Print("Program is not running\n");
                 continue;
             }
+        }
+        else if(command.compare("listsym") == 0){
+
+            //list symbols
         }
         else if(commands[0].compare("select") == 0){
 
@@ -683,7 +683,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                             continue;
                         }
 
-                       if(place_breakpoint(debug, break_list, address) < 0) continue;
+                       if(place_breakpoint(debug, li, address) < 0) continue;
                     }
                     else{
 
@@ -706,7 +706,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                                 log.Error("Address for corresponding line is not found\n");
                                 continue;
                             }
-                            if(place_breakpoint(debug, break_list, address) < 0) continue;
+                            if(place_breakpoint(debug, li, address) < 0) continue;
                         }
                     }
                 }else {
@@ -757,7 +757,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                         log.Error("Invalid range :%s\n", err_2.what());
                         continue;
                     }
-                    if(place_breakpoint(debug, break_list, address) < 0) continue;
+                    if(place_breakpoint(debug, li, address) < 0) continue;
                 }
 
                 /* if user has specified more addresses than 1, we are going to place breakpoints in all of those addresses */
@@ -779,7 +779,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                             log.Error("Invalid memory address :%s\n", err_2.what());
                             continue;
                         }
-                        if(place_breakpoint(debug, break_list, address) < 0) continue;
+                        if(place_breakpoint(debug, li, address) < 0) continue;
                     }
                 }
             }
@@ -801,57 +801,75 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
             }
         }
 
-        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 || commands[0].compare("d") == 0){
+        else if(command.compare("printb") == 0){
 
-            if(commands[1].empty()){
+            if(debug.GetProgramState()){
 
-                log.Prompt("Enter breakpoint number to remove");
-                if(!std::getline(std::cin, word)){
+                li.ListBreakpoints();
+            }else{
 
-                    log.Error("IO error\n");
-                    return -1;
-                }
-
-                if(word.empty()){
-
-                    log.Error("Invalid breakpoint number\n");
-                    return -1;
-                }
-
-                try{
-
-                    break_list.RemoveElement(std::stoi(word, nullptr, 10));
-                }catch (std::out_of_range& err_1) {
-
-                    log.Error("Invalid range :%s\n", err_1.what());
-                    continue;
-                }catch (std::invalid_argument& err_2) {
-
-                    log.Error("Invalid address or line number :: %s\n", err_2.what());
-                    continue;
-                }
-
-            }
-            else{
-
-                for (int i = 1; i < commands.size(); i++){
-
-                    try {
-
-                        break_list.RemoveElement(std::stoi(commands[i], nullptr, 10));
-                    }catch (std::out_of_range& err_1) {
-
-                        log.Error("Invalid range\n");
-                        continue;
-                    }catch (std::invalid_argument& err_2){
-
-                        log.Error("Invalid address or line number\n");
-                        continue;
-                    }
-                }
+                log.Print("Program is not running");
+                continue;
             }
         }
+        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 || commands[0].compare("d") == 0){
 
+            if(debug.GetProgramState()){
+                if(commands[1].empty()){
+
+                    log.Prompt("Enter breakpoint number to remove");
+                    if(!std::getline(std::cin, word)){
+
+                        log.Error("IO error\n");
+                        return -1;
+                    }
+
+                    if(word.empty()){
+
+                        log.Error("Invalid breakpoint number\n");
+                        return -1;
+                    }
+
+                    try{
+
+                        if(li.RemoveElement(debug, std::stoi(word, nullptr, 10)) < 0)
+                            return -1;
+                    }catch (std::out_of_range& err_1) {
+
+                        log.Error("Invalid range : %s\n", err_1.what());
+                        continue;
+                    }catch (std::invalid_argument& err_2) {
+
+                        log.Error("Invalid address or line number : %s\n", err_2.what());
+                        continue;
+                    }
+
+                }
+                else{
+
+                    for (int i = 1; i < commands.size(); i++){
+
+                        try {
+
+                            if(li.RemoveElement(debug, std::stoi(commands[i], nullptr, 10)) < 0)
+                                return -1;
+                        }catch (std::out_of_range& err_1) {
+
+                            log.Error("Invalid range : %s\n", err_1.what());
+                            continue;
+                        }catch (std::invalid_argument& err_2){
+
+                            log.Error("Invalid address or line number : %s\n", err_2.what());
+                            continue;
+                        }
+                    }
+                }
+            }else{
+
+                 log.Print("Program is not running");
+                continue;
+            }
+        }
         else if(commands[0].compare("set") == 0){
 
             if(debug.GetProgramState()){
@@ -972,7 +990,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                     return -1;
                 }
                 //check errors
-                if(_disable_breakpoint(break_list, std::stoi(word, nullptr, 10)) < 0)
+                if(_disable_breakpoint(li, std::stoi(word, nullptr, 10)) < 0)
                     continue;
             }
             else{
@@ -981,7 +999,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
 
                     try{
 
-                        if(_disable_breakpoint(break_list, std::stoi(commands[i], nullptr, 10)) < 0)
+                        if(_disable_breakpoint(li, std::stoi(commands[i], nullptr, 10)) < 0)
                             continue;
                     }catch (std::out_of_range& err_1) {
 
@@ -1020,7 +1038,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
 
         else if(commands[0].compare("auto") == 0 || commands[0].compare("a") == 0){
 
-            if(step_auto(debug, break_list, regs) < 0)
+            if(step_auto(debug, li, regs) < 0)
                 return -1;
         }
 
@@ -1043,7 +1061,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                     continue;
                 }
 
-                int ret = step_x(debug, break_list, regs, number_of_steps);
+                int ret = step_x(debug, li, regs, number_of_steps);
                 if(ret == EXIT_STATUS){
 
                     if(debug.GetPathname() == nullptr && debug.GetPid() != 0){
@@ -1062,7 +1080,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
             }
             else{       // else we just step 1
 
-                int ret = step_x(debug, break_list, regs, 1);
+                int ret = step_x(debug, li, regs, 1);
                 if(ret == EXIT_STATUS){
 
                     if(debug.GetPathname() == nullptr && debug.GetPid() != 0){
