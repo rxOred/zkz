@@ -13,14 +13,6 @@
 
 #include <sys/mman.h>
 
-void Elf::Free(void){
-
-    if(m_pathname != nullptr){
-
-        free(m_pathname);
-    }
-}
-
 void Elf::RemoveMap(void){
 
     if(m_mapping != nullptr){
@@ -35,7 +27,7 @@ void Elf::RemoveMap(void){
 
 int Elf::OpenFile(void){
 
-    int fd = open(m_pathname, O_RDONLY);
+    int fd = open((char *)S_list[S_list.size() - 1], O_RDONLY);
     if(fd < 0){
 
         log.PError("File open error");
@@ -55,7 +47,7 @@ int Elf::OpenFile(void){
 /* NOTE we might want to change what base address we want to get, in case of ld.so */
     uint64_t base_addr = GetBaseAddress();       // retrieve base address so it can be added to address in binary 
     if(base_addr == 0) return -1;
-    if(LoadSymbols(S_list, base_addr) < 0) return -1;
+    if(LoadSymbols(base_addr) < 0) return -1;
 
     return 0;
 }
@@ -90,10 +82,14 @@ int Elf::LoadFile(int fd, int size){
     return 0;
 }
 
-uint64_t Elf::GetBaseAddress(){
+uint64_t Elf::GetBaseAddress() const{
 
     char pathname[1024];
-    if(slog.Print(pathname, "/proc/%d/maps", m_pid) < 0) return -1;
+    if(sprintf(pathname, "/proc/%d/maps", m_pid) < 0) {
+
+        log.PError("String operation failed");
+        return -1;
+    }
     FILE *fh = fopen(pathname, "r");
     if(!fh){
 
@@ -134,7 +130,7 @@ uint64_t Elf::GetBaseAddress(){
     return addr;
 }
 
-int Elf::LoadSymbols(std::vector<Syminfo *> &S_list, uint64_t base_addr){
+int Elf::LoadSymbols(uint64_t base_addr){
 
     char *str = nullptr;
     Elf64_Sym *sym = nullptr;
@@ -223,60 +219,60 @@ int Elf::ParseDynamic(void){
         }
     }
 
-    Free();
-    m_pathname = nullptr; 
-
     for (int i = 0; i < shared_libs.size(); i++){
 
         if(lib_path){
 
-            m_pathname = (char *)calloc(sizeof(char), strlen(lib_path) + strlen(shared_libs[i]));
-            if(m_pathname == nullptr){
+            char *pathname = (char *)calloc(sizeof(char), strlen(lib_path) + strlen(shared_libs[i]));
+            if(pathname == nullptr){
 
                 log.PError("Memory allocation error");
                 return -1;
             }
-            if(strncpy(m_pathname, lib_path, strlen(lib_path)) == nullptr){
+            if(strncpy(pathname, lib_path, strlen(lib_path)) == nullptr){
 
                 log.PError("String operation failed");
                 return -1;
             }
-            if(strcat(m_pathname, shared_libs[i]) == nullptr){
+            if(strcat(pathname, shared_libs[i]) == nullptr){
 
                 log.PError("String operation failed");
                 return -1;
             }
+
+            P_list.push_back(pathname);
 
         }else{
 
             const char *def_lib = "/lib/";
 
-            m_pathname = (char *)calloc(sizeof(char), strlen(def_lib) + strlen(shared_libs[i]) + 3); 
-            if(m_pathname == nullptr){
+            char *pathname = (char *)calloc(sizeof(char), strlen(def_lib) + strlen(shared_libs[i]) + 3); 
+            if(pathname == nullptr){
 
                 log.PError("Memory alloction failed");
                 return -1;
             }
 
-            if(strncpy(m_pathname, def_lib, strlen(def_lib)) == nullptr){
+            if(strncpy(pathname, def_lib, strlen(def_lib)) == nullptr){
 
                 log.PError("String operation failed");
                 return -1;
             }
-            if(strcat(m_pathname, shared_libs[i]) == nullptr){
+            if(strcat(pathname, shared_libs[i]) == nullptr){
 
                 log.PError("String operation failed");
                 return -1;
             }
-#ifdef DEBUG
-            log.Debug("next search path: %s\tcurrent index :%d\t total number of libraries :%d\n", m_pathname, i, shared_libs.size());
-#endif
+
+            log.Debug("next search path: %s\tcurrent index :%d\t total number of libraries :%d\n", pathname, i, shared_libs.size());
+
+            P_list.push_back(pathname);
         }
 
         RemoveMap();
         OpenFile();
     }
-/* BUG we cant free shared_libs + i */
+
     if(lib_path != nullptr)
         free(lib_path);
 
