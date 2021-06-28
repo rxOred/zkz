@@ -24,6 +24,8 @@ class Debug{
             bool b_is_inforeg;    // shoudl we print register infomation on every stop of debugging process?
         } m_arguments;
 
+        bool b_sym_state;
+        bool b_dwarf_state;
         bool b_is_running;
         bool b_is_sys_stopped;    // to implement system call tracing + inspection
 
@@ -32,6 +34,8 @@ class Debug{
 
         ~Debug();
 
+        void SetDwarf(void);
+        void SetSym(void);
         void SetSystrace(void);    // set is_systrace (once these are true, cannot be undone
         void SetInforeg(void);     // set is_inforeg
         void SetPid(pid_t pid);    // set process id to debugee's
@@ -42,6 +46,8 @@ class Debug{
         void SetProgramState(bool state);     // set is_runiing
         void SetSyscallState(bool state);     // set is_sys_stopped
 
+        bool GetDwarfState(void) const;
+        bool GetSymState(void) const;
         bool GetSystrace(void) const;
         bool GetInforeg(void) const;
         pid_t GetPid(void) const;

@@ -26,11 +26,6 @@ class DebugLineInfo{
         std::vector<Lineinfo*> D_lines;
 
     public:
-        bool b_dwarf_state;
-
-        DebugLineInfo()
-            :b_dwarf_state(true) {}
-
         ~DebugLineInfo(){
 
             for(auto x = D_lines.begin(); x != D_lines.end(); x++){

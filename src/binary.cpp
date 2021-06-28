@@ -166,6 +166,17 @@ int Elf::LoadSymbols(uint64_t base_addr){
     return 0;
 }
 
+bool Elf::SearchForPath(char *pathname){
+
+    for (auto x = P_list.begin(); x != P_list.end(); x++){
+
+        if((*x) == pathname)
+            return true;
+    }
+
+     return false;
+}
+
 int Elf::ParseDynamic(void){
 
     Elf64_Dyn *dyn = nullptr; 
@@ -240,7 +251,11 @@ int Elf::ParseDynamic(void){
                 return -1;
             }
 
-            P_list.push_back(pathname);
+            if(SearchForPath(pathname))
+                continue;
+            else
+                P_list.push_back(pathname);
+
 
         }else{
 
@@ -266,7 +281,10 @@ int Elf::ParseDynamic(void){
 
             log.Debug("next search path: %s\tcurrent index :%d\t total number of libraries :%d\n", pathname, i, shared_libs.size());
 
-            P_list.push_back(pathname);
+            if(SearchForPath(pathname))
+                continue;
+            else
+                P_list.push_back(pathname);
         }
 
         RemoveMap();
@@ -283,4 +301,23 @@ int Elf::ParseDynamic(void){
     shared_libs.clear();
 
     return 0;       // NOTE modify this so this function will recurse
+}
+
+void Elf::ListSyms(int prange){
+
+
+    log.Print("address\t\tsymbol");
+    if(prange == -1){
+
+        for(auto x = S_list.begin(); x != S_list.end(); x++){
+            log.Print("%x\t\t%s\n", (*x)->m_address, (*x)->m_symbol);
+        }
+    }
+
+    else{
+
+        for(int i = 0; i < prange; i++){
+            log.Print("%x\t\t%s\n", S_list[i]->m_address, S_list[i]->m_symbol);
+        }
+    }
 }

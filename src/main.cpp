@@ -9,6 +9,8 @@ Debug::Debug(){
     m_arguments.is_systrace = false;
     b_is_running = false;
     b_is_sys_stopped = false;
+    b_dwarf_state = true;
+    b_sym_state = true;
 }
 
 Debug::~Debug(){
@@ -18,6 +20,16 @@ Debug::~Debug(){
  
         free(m_arguments.m_dbg.pathname + i);
     }
+}
+
+void Debug::SetDwarf(void){
+
+    b_dwarf_state = false;
+}
+
+void Debug::SetSym(void){
+
+    b_sym_state = false;
 }
 
 void Debug::SetSystrace(void){
@@ -53,6 +65,16 @@ void Debug::SetProgramState(bool state){
 void Debug::SetSyscallState(bool state){
 
     b_is_sys_stopped = state;
+}
+
+bool Debug::GetDwarfState(void) const {
+
+    return b_dwarf_state;
+}
+
+bool Debug::GetSymState(void) const {
+
+    return b_sym_state;
 }
 
 bool Debug::GetSystrace(void) const{

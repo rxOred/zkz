@@ -26,11 +26,14 @@
 #include "utils.h"
 #include "registers.h"
 #include "dwarf_information.h"
+#include "binary.h"
 
 #define EXIT_STATUS 1
 #define STOPPED_STATUS 2
 #define SIGNALED_STATUS 3
 
+#define SYMBOLS 0
+#undef SYMBOLS
 void kill_process(pid_t pid){
 
     kill(pid, SIGKILL);
@@ -444,7 +447,7 @@ int init_debug_lines(Debug& debug, DebugLineInfo &li){
     return 0;
 }
 
-int mainloop(Debug& debug, DebugLineInfo& line_info){
+int mainloop(Debug& debug, DebugLineInfo& line_info, Elf& elf){
 
     log.SetState(PRINT | PROMPT | WARN | INFO | DEBUG | PERROR | ERROR);
 
@@ -508,7 +511,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
 
             if(debug.GetProgramState()){
 
-                if(line_info.b_dwarf_state){
+                if(debug.GetDwarfState()){
 
                     if(commands.size() < 2){
 
@@ -573,15 +576,44 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                 continue;
             }
         }
-        else if(command.compare("listsym") == 0){
+        else if(commands[0].compare("listsym") == 0){
 
-            //list symbols
+            if(debug.GetProgramState()){
+
+                if(debug.GetSymState()){
+                    if(commands.size() <= 1){
+
+                        elf.ListSyms(-1);
+                    }
+                    else{
+
+                        int prange;
+                        if(!commands[1].empty()){
+
+                            try{
+
+                                prange = std::stoi(commands[1], nullptr, 10);
+                            }catch(std::invalid_argument& err_1){
+
+                                log.Error("Invalid range %s\n", err_1.what());
+                                continue;
+                            }catch(std::out_of_range& err_2){
+
+                                log.Error("Invalid range %s\n", err_2.what());
+                                continue;
+                            }
+
+                            elf.ListSyms(prange);
+                        }
+                    }
+                }
+            }
         }
         else if(commands[0].compare("select") == 0){
 
             if(debug.GetProgramState()){
 
-                if(line_info.b_dwarf_state){
+                if(debug.GetDwarfState()){
                     if(commands.size() <= 1){
 
                         log.Prompt("Please select a comilation unit\n");
@@ -602,11 +634,11 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                             default_compilation_unit = std::stoi(word, nullptr, 10);
                         }catch (std::out_of_range const& err_1){
 
-                            log.Error("Invalid range\n");
+                            log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            log.Error("Invalid compilation unit number\n");
+                            log.Error("Invalid compilation unit number %d\n", err_2.what());
                             continue;
                         }
                     }
@@ -622,11 +654,11 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                             log.Print("Compilation unit : %d selected\n", default_compilation_unit);
                         }catch (std::out_of_range const& err_1){
 
-                            log.Error("Invalid range\n");
+                            log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            log.Error("Invalid compilation unit number\n");
+                            log.Error("Invalid compilation unit number %s\n", err_2.what());
                             continue;
                         }
                     }
@@ -645,7 +677,7 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
 
             if(debug.GetProgramState()){
 
-                if(line_info.b_dwarf_state){
+                if(debug.GetDwarfState()){
 
                     log.Debug("Breakpoint at line number\n");
                     uint64_t address;
@@ -675,11 +707,11 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
  
                        }catch (std::out_of_range& err_1) {
 
-                            log.Error("Invalid range\n");
+                            log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2) {
 
-                            log.Error("Invalid line number\n");
+                            log.Error("Invalid line number %s\n", err_2.what());
                             continue;
                         }
 
@@ -693,11 +725,11 @@ int mainloop(Debug& debug, DebugLineInfo& line_info){
                                 address = line_info.GetAddressByLine(default_compilation_unit, std::stoi(commands[i], nullptr, 10));
                             }catch (std::out_of_range& err_1) {
 
-                                log.Error("Invalid range\n");
+                                log.Error("Invalid range %s\n", err_1.what());
                                 continue;
                             }catch (std::invalid_argument& err_2) {
 
-                                log.Error("Invalid line number\n");
+                                log.Error("Invalid line number %s\n", err_2.what());
                                 continue;
                             }
 
@@ -1177,8 +1209,18 @@ int main(int argc, char *argv[]){
         if(init_debug_lines(debug, line_info) < 0){
 
             log.Error("Error reading dwarf information\n");
-            line_info.b_dwarf_state = false;
+            debug.SetDwarf();
         }
+
+        Elf elf(debug.GetPid(), debug.GetPathname()[0]);
+
+#ifdef SYMBOLS
+        if(elf.OpenFile() == -1){
+
+            log.Error("Error reading symbol information\n");
+            debug.SetSym();
+        }
+#endif
 
         /* printing where rip is at */
         struct user_regs_struct regs;
@@ -1188,7 +1230,7 @@ int main(int argc, char *argv[]){
             return -1;
         }
         log.Print("[zkz] Started debugging\trip : %x\n", regs.rip);
-        if(mainloop(debug, line_info) < 0) return -1;
+        if(mainloop(debug, line_info, elf) < 0) return -1;
     }
     exit(0);
 }

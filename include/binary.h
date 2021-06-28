@@ -67,10 +67,12 @@ class Elf{
             }
         }
 
+        bool SearchForPath(char *pathname);
         int OpenFile(void);
         int LoadFile(int fd, int size);
         uint64_t GetBaseAddress() const;
         int LoadSymbols(uint64_t base_addr);
         void RemoveMap(void);
         int ParseDynamic(void);
+        void ListSyms(int prange);
 };
