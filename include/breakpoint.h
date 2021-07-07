@@ -8,7 +8,10 @@
 class Breakpoint{
 
     private:
-        bool b_is_enabled;      // zkz will not stop at breakpoint if this is false, it will restore breakpoint instruction to its original instruction and continue execution
+        /* NOTE no stop at breakpoint if this is false, it will restore breakpoint 
+         * instruction to its original instruction and continue execution 
+         */
+        bool b_is_enabled;
 
     public:
         uint64_t m_address;
@@ -25,7 +28,7 @@ class Breakpoint{
 class BreakpointList{
 
     private:
-        std::vector<Breakpoint*> B_List;    // dynamic array of pointers to Breakpoint
+        std::vector<Breakpoint*> B_List;
 
     public:
         ~BreakpointList();

@@ -34,6 +34,7 @@
 
 #define SYMBOLS 0
 #undef SYMBOLS
+
 void kill_process(pid_t pid){
 
     kill(pid, SIGKILL);
@@ -1134,6 +1135,25 @@ int mainloop(Debug& debug, DebugLineInfo& line_info, Elf& elf){
         /* else if(command.compare("unwind") == 0){
 
         } */
+#ifdef INJECT
+        else if(command.compare("inject") == 0){
+
+            log.Prompt(">");
+            if(!std::getline(std::cin, word)){
+
+                log.Error("IO error\n");
+                return -1;                
+            }
+            if(word.empty()){
+                
+                log.Print("invalid code\n");
+                continue;
+            }
+
+            // inject code            
+        }
+
+#endif
 
         else if(command.compare("exit") == 0){
 
@@ -1214,8 +1234,9 @@ int main(int argc, char *argv[]){
 
         Elf elf(debug.GetPid(), debug.GetPathname()[0]);
 
+#undef SYMBOLS
 #ifdef SYMBOLS
-        if(elf.OpenFile() == -1){
+        if(elf.OpenFile(0) == -1){
 
             log.Error("Error reading symbol information\n");
             debug.SetSym();

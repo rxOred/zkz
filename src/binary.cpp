@@ -25,9 +25,9 @@ void Elf::RemoveMap(void){
     m_mapping = nullptr;
 }
 
-int Elf::OpenFile(void){
+int Elf::OpenFile(int index){
 
-    int fd = open((char *)S_list[S_list.size() - 1], O_RDONLY);
+    int fd = open((char *)P_list[index], O_RDONLY);
     if(fd < 0){
 
         log.PError("File open error");
@@ -288,7 +288,7 @@ int Elf::ParseDynamic(void){
         }
 
         RemoveMap();
-        OpenFile();
+        OpenFile(P_list.size() - 1);
     }
 
     if(lib_path != nullptr)
@@ -309,15 +309,13 @@ void Elf::ListSyms(int prange){
     log.Print("address\t\tsymbol");
     if(prange == -1){
 
-        for(auto x = S_list.begin(); x != S_list.end(); x++){
+        for(auto x = S_list.begin(); x != S_list.end(); x++)
             log.Print("%x\t\t%s\n", (*x)->m_address, (*x)->m_symbol);
-        }
     }
 
     else{
 
-        for(int i = 0; i < prange; i++){
+        for(int i = 0; i < prange; i++)
             log.Print("%x\t\t%s\n", S_list[i]->m_address, S_list[i]->m_symbol);
-        }
     }
 }

@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <elf.h>
 #include <sys/mman.h>
+#include "log.h"
 
 typedef struct {
     uint64_t m_address;
@@ -35,7 +36,10 @@ class Elf{
             m_pid = pid;
             m_size = 0;
             char *m_pathname = strdup(pathname);
-            P_list.push_back(m_pathname); 
+            P_list.push_back(m_pathname);
+
+            log.Print("gets here %d\n", S_list.size());
+
             m_ehdr = nullptr;
             m_phdr = nullptr;
             m_shdr = nullptr;
@@ -68,7 +72,7 @@ class Elf{
         }
 
         bool SearchForPath(char *pathname);
-        int OpenFile(void);
+        int OpenFile(int index);
         int LoadFile(int fd, int size);
         uint64_t GetBaseAddress() const;
         int LoadSymbols(uint64_t base_addr);
