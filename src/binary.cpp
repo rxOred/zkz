@@ -6,12 +6,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 
 #include "log.h"
 #include "main.h"
 #include "binary.h"
 
 #include <sys/mman.h>
+#include <thread>
 
 void Elf::RemoveMap(void){
 
@@ -31,23 +33,25 @@ int Elf::OpenFile(int index){
     if(fd < 0){
 
         log.PError("File open error");
+        b_load_failed = true;
         return -1;
     }
 
     struct stat st;
     if(fstat(fd, &st) < 0){
 
-        log.PError("File open error");
+        log.PError("File error");
+        b_load_failed = true;
         return -1;
     }
 
     if(LoadFile(fd, st.st_size) < 0) return -1;     // assigns main header tables
 
+//    std::thread load()
 
 /* NOTE we might want to change what base address we want to get, in case of ld.so */
-    uint64_t base_addr = GetBaseAddress();       // retrieve base address so it can be added to address in binary 
-    if(base_addr == 0) return -1;
-    if(LoadSymbols(base_addr) < 0) return -1;
+
+    if(LoadSymbols() < 0) return -1;
 
     return 0;
 }
@@ -60,6 +64,7 @@ int Elf::LoadFile(int fd, int size){
     if(m_mapping == (uint8_t *) MAP_FAILED){
 
         log.PError("Memory map failed");
+        b_load_failed = true;
         return -1;
     }
 
@@ -67,12 +72,14 @@ int Elf::LoadFile(int fd, int size){
     if(m_ehdr->e_ident[0] != 0x7f || m_ehdr->e_ident[1] != 'E' || m_ehdr->e_ident[2] != 'L' || m_ehdr->e_ident[3] != 'F'){
 
         log.Error("Not an elf binary\n");
+        b_load_failed = true;
         return -1;
     }
 
     if(m_ehdr->e_type != ET_DYN){
 
         log.Error("Not a dynamically linked binary\n");
+        b_load_failed = true;
         return -1;
     }
 
@@ -82,18 +89,20 @@ int Elf::LoadFile(int fd, int size){
     return 0;
 }
 
-uint64_t Elf::GetBaseAddress() const{
+uint64_t Elf::GetBaseAddress(pid_t pid){
 
     char pathname[1024];
-    if(sprintf(pathname, "/proc/%d/maps", m_pid) < 0) {
+    if(sprintf(pathname, "/proc/%d/maps", pid) < 0) {
 
         log.PError("String operation failed");
+        b_load_failed = true;
         return -1;
     }
     FILE *fh = fopen(pathname, "r");
     if(!fh){
 
         log.PError("File open error");
+        b_load_failed = true;
         return 0;
     }
 
@@ -101,6 +110,7 @@ uint64_t Elf::GetBaseAddress() const{
     if(!buffer){
 
         log.PError("Memory allocation error");
+        b_load_failed = true;
         return 0;
     }
 
@@ -110,6 +120,7 @@ uint64_t Elf::GetBaseAddress() const{
         if(c == EOF || c == '\0'){
 
             log.Print("errror reading proc file\n");
+            b_load_failed = true;
             return 0;
         }
 
@@ -130,7 +141,7 @@ uint64_t Elf::GetBaseAddress() const{
     return addr;
 }
 
-int Elf::LoadSymbols(uint64_t base_addr){
+int Elf::LoadSymbols(){
 
     char *str = nullptr;
     Elf64_Sym *sym = nullptr;
@@ -149,13 +160,14 @@ int Elf::LoadSymbols(uint64_t base_addr){
                     if(syminfo == nullptr){
 
                         log.PError("Memory allocation failed");
+                        b_load_failed = true;
                         return -1;
                     }
 
                     if(sym[j].st_value != 0){
 
                         syminfo->m_symbol = (char *) strdup(&str[sym[j].st_name]);
-                        syminfo->m_address = base_addr + sym[j].st_value;
+                        syminfo->m_address = m_base_addr + sym[j].st_value;
                         S_list.push_back(syminfo);
                     }
                 }

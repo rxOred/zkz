@@ -1,3 +1,4 @@
+#include <bits/stdint-uintn.h>
 #include <vector>
 #include <iostream>
 #include <cstring>
@@ -27,23 +28,15 @@ class Elf{
 
     public:
 
-        pid_t m_pid;
+        uint64_t m_base_addr;
+        bool b_load_failed;
         std::vector<char *> P_list;     /* list of pathnames already searched */
         std::vector<Syminfo *> S_list;   /* list of Syminfo */
 
-        Elf(pid_t pid, const char *pathname){
-
-            m_pid = pid;
-            m_size = 0;
-            char *m_pathname = strdup(pathname);
-            P_list.push_back(m_pathname);
-
-            log.Print("gets here %d\n", S_list.size());
-
-            m_ehdr = nullptr;
-            m_phdr = nullptr;
-            m_shdr = nullptr;
-            m_mapping = nullptr;
+        Elf(pid_t pid, const char *pathname)
+            : b_load_failed(false), m_size(0), m_ehdr(nullptr), m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr){
+            m_base_addr = GetBaseAddress(pid);
+            P_list.push_back(strdup(pathname));
         }
 
         ~Elf(){
@@ -74,8 +67,8 @@ class Elf{
         bool SearchForPath(char *pathname);
         int OpenFile(int index);
         int LoadFile(int fd, int size);
-        uint64_t GetBaseAddress() const;
-        int LoadSymbols(uint64_t base_addr);
+        uint64_t GetBaseAddress(pid_t pid);
+        int LoadSymbols();
         void RemoveMap(void);
         int ParseDynamic(void);
         void ListSyms(int prange);

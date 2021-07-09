@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <iostream>
+#include <thread>
 
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -416,7 +417,7 @@ void parse_lines(Debug &debug, DebugLineInfo &li, const dwarf::line_table &lt, u
     }
 }
 
-int init_debug_lines(Debug& debug, DebugLineInfo &li){
+void init_debug_lines(Debug& debug, DebugLineInfo &li){
 
     elf::elf elf_f;
     dwarf::dwarf dwarf_f;
@@ -426,7 +427,7 @@ int init_debug_lines(Debug& debug, DebugLineInfo &li){
     if(fd < 0){
 
         log.PError("File open error");
-        return -1;
+        debug.SetDwarf();
     }
 
     elf_f = elf::elf{elf::create_mmap_loader(fd)};
@@ -442,10 +443,6 @@ int init_debug_lines(Debug& debug, DebugLineInfo &li){
         parse_lines(debug, li, lt, base_addr, i);
         i++;
     }
-
-    log.Debug("Object should not be accessible\n");
-
-    return 0;
 }
 
 int mainloop(Debug& debug, DebugLineInfo& line_info, Elf& elf){
@@ -1225,23 +1222,10 @@ int main(int argc, char *argv[]){
         }
 
         DebugLineInfo line_info;
-
-        if(init_debug_lines(debug, line_info) < 0){
-
-            log.Error("Error reading dwarf information\n");
-            debug.SetDwarf();
-        }
-
         Elf elf(debug.GetPid(), debug.GetPathname()[0]);
 
-#undef SYMBOLS
-#ifdef SYMBOLS
-        if(elf.OpenFile(0) == -1){
-
-            log.Error("Error reading symbol information\n");
-            debug.SetSym();
-        }
-#endif
+        std::thread line(init_debug_lines, debug, line_info);
+        std::thread symbols(&Elf::OpenFile, elf, 0);
 
         /* printing where rip is at */
         struct user_regs_struct regs;
@@ -1251,6 +1235,15 @@ int main(int argc, char *argv[]){
             return -1;
         }
         log.Print("[zkz] Started debugging\trip : %x\n", regs.rip);
+
+        line.join();
+        symbols.join();
+        if(elf.b_load_failed){
+
+            log.Error("Error parsing symbols");
+            debug.SetSym();
+        }
+
         if(mainloop(debug, line_info, elf) < 0) return -1;
     }
     exit(0);
