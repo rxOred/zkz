@@ -73,4 +73,4 @@ class Main{
         int StepX(BreakpointList& li, int number_of_steps);
 };
 
-#endif /* Debugger.h */
+#endif /* DEBUGGER_H */

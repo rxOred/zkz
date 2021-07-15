@@ -4,4 +4,4 @@
 void PrintUsage(void);
 void PrintHelp(void);
 
-#endif /* utils.h */
+#endif /* UTILS_H */

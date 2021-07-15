@@ -12,20 +12,46 @@ class Debug{
 
     private:
         struct {
+
+            /*
+             * process information
+             */
             struct {
                 pid_t pid;
                 char **pathname;    //free this
                 int count;
             }m_dbg;
 
-            bool is_systrace;   // should we stop and wait for user in every syscall invocation of debugee?
-            bool b_is_inforeg;    // shoudl we print register infomation on every stop of debugging process?
+            /*
+             * should we stop and wait for user in every syscall invocation of debugee?
+             */
+            bool is_systrace;
+
+            /*
+             * shoudl we print register infomation on every stop of debugging process?
+             */
+            bool b_is_inforeg;
         } m_arguments;
 
+        /*
+         * symbols parsed or not
+         */
         bool b_sym_state;
+
+        /*
+         * debug lines parsed or not
+         */
         bool b_dwarf_state;
+
+        /*
+         * is child process running
+         */
         bool b_is_running;
-        bool b_is_sys_stopped;    // to implement system call tracing + inspection
+
+        /*
+         * for system call ibjection
+         */
+        bool b_is_sys_stopped;
 
     public:
         Debug();
@@ -34,15 +60,27 @@ class Debug{
 
         void SetDwarf(void);
         void SetSym(void);
-        void SetSystrace(void);    // set is_systrace (once these are true, cannot be undone
-        void SetInforeg(void);     // set is_inforeg
-        void SetPid(pid_t pid);    // set process id to debugee's
-        void SetPathname(char **pathname);     // set pathname of debugee if we are forking it
+
+        /*
+         * set is_systrace (once these are true, cannot be undone
+         */
+        void SetSystrace(void);
+
+        /*
+         * set is_runiing
+         */
+        void SetInforeg(void);
+
+        /*
+         * set process id 
+         */
+        void SetPid(pid_t pid);
+
+
+        void SetPathname(char **pathname);
         void SetCount(int count);
-        /* int open_elf(const char *filename);
-        void set_sourceifo(int file_descriptor); */
-        void SetProgramState(bool state);     // set is_runiing
-        void SetSyscallState(bool state);     // set is_sys_stopped
+        void SetProgramState(bool state);
+        void SetSyscallState(bool state);
 
         bool GetDwarfState(void) const;
         bool GetSymState(void) const;
@@ -55,4 +93,4 @@ class Debug{
         bool GetSyscallState(void) const;
 };
 
-#endif /* debug.h */
+#endif /* DEBUG_H */

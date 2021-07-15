@@ -17,6 +17,31 @@
 
 #define FAILED 1
 
+Elf::~Elf(){
+
+    for(int i = 0; i < S_list.size(); i++){
+
+        free(S_list[i]->m_symbol);
+        free(S_list[i]);
+    }
+
+    if(!S_list.empty())
+        S_list.clear();
+
+    if(P_list.size() > 0){
+
+        for(int i = 0; i < P_list.size(); i++){
+
+            free(P_list[i]);
+        }
+
+        if(!P_list.empty()){
+
+            P_list.clear();
+        }
+    }
+}
+
 void Elf::RemoveMap(void){
 
     if(m_mapping != nullptr){

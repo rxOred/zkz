@@ -13,4 +13,4 @@ int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs);
 int InfoRegister(Debug& debug, struct user_regs_struct& regs, std::string reg);
 int SetRegister(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value);
 
-#endif /* registers.h */
+#endif /* REGISTERS_H */

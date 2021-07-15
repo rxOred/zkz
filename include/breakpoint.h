@@ -15,8 +15,17 @@ class Breakpoint{
         bool b_is_enabled;
 
     public:
+
+        /*
+         * address to place breakpoint
+         */
         uint64_t m_address;
+
+        /* 
+         * original data at the address
+         */
         uint64_t m_origdata;
+
         int m_breakpoint_number;
 
         Breakpoint();
@@ -29,6 +38,10 @@ class Breakpoint{
 class BreakpointList{
 
     private:
+
+        /*
+         * vector of Breakpoint pointers
+         */
         std::vector<Breakpoint*> B_List;
 
     public:
@@ -43,4 +56,4 @@ class BreakpointList{
         void ListBreakpoints(void) const;
 };
 
-#endif /* breakpoint.h */
+#endif /* BREAKPOINT_H */

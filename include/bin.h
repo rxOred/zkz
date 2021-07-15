@@ -19,20 +19,48 @@ class Elf{
 
     private:
 
-        /* size of mapped buffer and mapped buffer */
+        /* 
+         * size of mapped buffer and mapped buffer 
+         */
         int m_size;
+
+        /*
+         * pointer to mapped region
+         */
         uint8_t *m_mapping;
+
+        /* 
+         * base load address of the child
+         */
         uint64_t m_base_addr;
 
-        /* elf section header information */
+        /* 
+         * elf header
+         */
         Elf64_Ehdr *m_ehdr;
+
+        /*
+         * program header table
+         */
         Elf64_Phdr *m_phdr;
+
+        /*
+         * section header table
+         */
         Elf64_Shdr *m_shdr;
 
     public:
 
         bool b_load_failed;
-        std::vector<char *> P_list;     /* list of pathnames already searched */
+
+        /*
+         * vector of pathnames already searched
+         */
+        std::vector<char *> P_list;
+
+        /*
+         * vector of Syminfo *
+         */
         std::vector<Syminfo *> S_list;   /* list of Syminfo */
 
         Elf(pid_t pid, const char *pathname, uint64_t base_addr)
@@ -40,30 +68,7 @@ class Elf{
             P_list.push_back(strdup(pathname));
         }
 
-        ~Elf(){
-
-            for(int i = 0; i < S_list.size(); i++){
-
-                free(S_list[i]->m_symbol);
-                free(S_list[i]);
-            }
-
-            if(!S_list.empty())
-                S_list.clear();
-
-            if(P_list.size() > 0){
-
-                for(int i = 0; i < P_list.size(); i++){
-
-                    free(P_list[i]);
-                }
-
-                if(!P_list.empty()){
-
-                    P_list.clear();
-                }
-            }
-        }
+        ~Elf();
 
         bool SearchForPath(char *pathname);
         int OpenFile(int index);
@@ -74,4 +79,4 @@ class Elf{
         void ListSyms(int prange);
 };
 
-#endif /* bin.h */
+#endif /* BIN_H */

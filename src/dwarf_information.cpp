@@ -34,6 +34,15 @@ int DebugLineInfo::GetNoOfCompilationUnits(void){
     return max;
 }
 
+DebugLineInfo::~DebugLineInfo(){
+
+    for(auto x = D_lines.begin(); x != D_lines.end(); x++){
+
+        delete((*x));
+    }
+    D_lines.clear();
+}
+
 uint64_t DebugLineInfo::GetAddressByLine(int compilation_unit, int line_number){
 
     if(compilation_unit > GetNoOfCompilationUnits() || line_number > GetMaxLineNumber(compilation_unit) || line_number < GetMinLineNumber(compilation_unit)){

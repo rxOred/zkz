@@ -316,4 +316,4 @@ class Log {
 
 static Log log(DEBUG | PRINT | PROMPT | ERROR | INFO | PERROR);
 
-#endif /* log.h */
+#endif /* LOG_H */

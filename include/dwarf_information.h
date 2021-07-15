@@ -7,7 +7,9 @@
 #include <sys/types.h>
 #include <vector>
 
-/* NOTE each of these represent a line and its corresponding address, compilation_unit */
+/* 
+ * NOTE each of these represent a line and its corresponding address, compilation_unit 
+ */
 class Lineinfo{
 
     public:
@@ -18,25 +20,22 @@ class Lineinfo{
         Lineinfo(int line_number, uint64_t address, int unit_number);
 };
 
-/* NOTE if init_debug_lines fails, do not end the process */
-/* NOTE if init_debug_lines fails, user should not be able to use select && other related commands */
+/*
+ * NOTE if init_debug_lines fails, do not end the process 
+ */
+
+/* 
+ * NOTE if init_debug_lines fails, user should not be able to use select && other related commands 
+ */
+
 class DebugLineInfo{
 
     private:
         std::vector<Lineinfo*> D_lines;
 
     public:
-        ~DebugLineInfo(){
+        ~DebugLineInfo();
 
-            for(auto x = D_lines.begin(); x != D_lines.end(); x++){
-
-                delete((*x));
-            }
-            D_lines.clear();
-        }
-
-        //int InitDebugLines(Debug& debug);
-        //void ParseLines(Debug& debug, const::dwarf::line_table &lt, uint64_t base_addr, int unit_number);
         void AppendElement(int line_number, uint64_t address, int unit_number);
         uint64_t GetElementByIndex(int index);
         uint64_t GetAddressByLine(int compilation_unit, int line_number);
@@ -47,4 +46,4 @@ class DebugLineInfo{
         int ListSrcLines(int compilation_unit);
 };
 
-#endif /* dwarf_information.h */
+#endif /* DWARF_INFORMATION_H */
