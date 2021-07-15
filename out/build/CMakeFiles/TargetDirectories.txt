@@ -1,4 +1,0 @@
-/home/rxored/repos/zkz/out/build/CMakeFiles/edit_cache.dir
-/home/rxored/repos/zkz/out/build/CMakeFiles/libelfin.dir
-/home/rxored/repos/zkz/out/build/CMakeFiles/rebuild_cache.dir
-/home/rxored/repos/zkz/out/build/CMakeFiles/zkz.dir
