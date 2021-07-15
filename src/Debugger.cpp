@@ -1324,10 +1324,7 @@ int Main::Debugger(void){
     m_base_addr = GetBaseAddress(m_debug.GetPid());
 
     std::thread worker_debuglines(&Main::InitDebugLines, this);
-    /*
-     * NOTE
-     */
-    //std::thread worker_elfsyms(&Elf::OpenFile, 0);
+    std::thread worker_elfsyms(&Elf::OpenFile, m_elf_ptr, 0);
 
     /* printing where rip is at */
     if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
@@ -1337,8 +1334,8 @@ int Main::Debugger(void){
     }
     log.Print("[zkz] Started debugging\trip : %x\n", m_regs.rip);
 
-    //worker_elfsyms.join();
-   // worker_debuglines.join();
+    worker_elfsyms.join();
+    worker_debuglines.join();
 
     if(m_elf_ptr->b_load_failed){
 
