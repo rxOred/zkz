@@ -1,4 +1,5 @@
 #include "registers.h"
+#include "log.h"
 #include <bits/stdint-uintn.h>
 #include <sys/ptrace.h>
 #include <sys/user.h>

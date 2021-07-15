@@ -1,4 +1,5 @@
-#include "main.h"
+#include "debug.h"
+#include "log.h"
 #include <sys/types.h>
 
 Debug::Debug(){

@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(zkz VERSION 0.1)
 include_directories(include libs/libelfin)
-file(GLOB_RECURSE SRC_FILES src/*.cpp)
-add_executable(${PROJECT_NAME} Debugger.cpp ${SRC_FILES})
+file(GLOB_RECURSE SRC_FILES ./src/*.cpp)
+add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 add_custom_target(libelfin COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libs/libelfin)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

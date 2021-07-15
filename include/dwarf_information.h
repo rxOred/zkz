@@ -1,6 +1,6 @@
-#pragma once
+#ifndef DWARF_INFORMATION_H
+#define DWARF_INFORMATION_H
 
-#include "main.h"
 #include <bits/stdint-uintn.h>
 #include <libelfin/dwarf/dwarf++.hh>
 #include <map>
@@ -47,3 +47,4 @@ class DebugLineInfo{
         int ListSrcLines(int compilation_unit);
 };
 
+#endif /* dwarf_information.h */

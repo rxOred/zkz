@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <stdio.h>
 
+#include "log.h"
+
 Lineinfo::Lineinfo(int line_number, uint64_t address, int unit_number){
 
     m_line_number = line_number;

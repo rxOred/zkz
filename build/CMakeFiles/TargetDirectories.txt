@@ -1,0 +1,4 @@
+/home/redriot/repos/zkz/build/CMakeFiles/edit_cache.dir
+/home/redriot/repos/zkz/build/CMakeFiles/libelfin.dir
+/home/redriot/repos/zkz/build/CMakeFiles/rebuild_cache.dir
+/home/redriot/repos/zkz/build/CMakeFiles/zkz.dir

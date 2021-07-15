@@ -1,9 +1,10 @@
-#pragma once
+#ifndef BREAKPOINT_H
+#define BREAKPOINT_H
 
 #include <bits/stdint-uintn.h>
 #include <functional>
 #include <vector>
-#include "main.h"
+#include "debug.h"
 
 class Breakpoint{
 
@@ -35,9 +36,11 @@ class BreakpointList{
 
         int GetNoOfBreakpoints() const;
         void AppendElement(uint64_t address, uint64_t origdata);
-        int RemoveElement(Debug& debug, int breakpoint_number);
+        int RemoveElement(const Debug& debug, int breakpoint_number);
         Breakpoint *GetElementByIndex(int index) const;
         Breakpoint *GetElementByBreakpointNumber(int breakpoint_number) const;
         Breakpoint *GetElementByAddress(uint64_t addr) const;
         void ListBreakpoints(void) const;
 };
+
+#endif /* breakpoint.h */

@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <vector>
 #include "breakpoint.h"
-#include "main.h"
+#include "debug.h"
 #include <cstdio>
 #include <sys/ptrace.h>
+#include "log.h"
 
 Breakpoint::Breakpoint(){
 
@@ -62,7 +63,7 @@ void BreakpointList::AppendElement(uint64_t address, uint64_t origdata){
 }
 
 /* BUG Remove breakpoint from its number */
-int BreakpointList::RemoveElement(Debug& debug, int breakpoint_number){
+int BreakpointList::RemoveElement(const Debug& debug, int breakpoint_number){
 
     if(breakpoint_number > GetNoOfBreakpoints() || breakpoint_number <= 0){
 

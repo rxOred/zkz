@@ -7,13 +7,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <unistd.h>
 
+#include "debug.h"
+#include "bin.h"
 #include "log.h"
-#include "main.h"
-#include "binary.h"
 
 #include <sys/mman.h>
-#include <thread>
+
+#define FAILED 1
 
 void Elf::RemoveMap(void){
 
@@ -33,27 +35,31 @@ int Elf::OpenFile(int index){
     if(fd < 0){
 
         log.PError("File open error");
-        b_load_failed = true;
-        return -1;
+        goto failed;
     }
 
     struct stat st;
     if(fstat(fd, &st) < 0){
 
         log.PError("File error");
-        b_load_failed = true;
-        return -1;
+        goto file_failed;
     }
 
-    if(LoadFile(fd, st.st_size) < 0) return -1;     // assigns main header tables
+    if(LoadFile(fd, st.st_size) < 0)
+        goto file_failed;
+    close(fd);
 
-//    std::thread load()
-
-/* NOTE we might want to change what base address we want to get, in case of ld.so */
-
-    if(LoadSymbols() < 0) return -1;
+    if(LoadSymbols() < 0)
+        goto failed;
 
     return 0;
+
+file_failed:
+    close(fd);
+
+failed:
+    b_load_failed = true;
+    return -FAILED;
 }
 
 int Elf::LoadFile(int fd, int size){
@@ -64,91 +70,48 @@ int Elf::LoadFile(int fd, int size){
     if(m_mapping == (uint8_t *) MAP_FAILED){
 
         log.PError("Memory map failed");
-        b_load_failed = true;
-        return -1;
+        goto failed;
     }
 
     m_ehdr = (Elf64_Ehdr *)m_mapping;
     if(m_ehdr->e_ident[0] != 0x7f || m_ehdr->e_ident[1] != 'E' || m_ehdr->e_ident[2] != 'L' || m_ehdr->e_ident[3] != 'F'){
 
         log.Error("Not an elf binary\n");
-        b_load_failed = true;
-        return -1;
+        goto not_elf;
     }
 
     if(m_ehdr->e_type != ET_DYN){
 
         log.Error("Not a dynamically linked binary\n");
-        b_load_failed = true;
-        return -1;
+        goto not_elf;
     }
 
     if(m_ehdr->e_phoff != 0){ m_phdr = (Elf64_Phdr *) &m_mapping[m_ehdr->e_phoff]; }
     if(m_ehdr->e_shoff != 0){ m_shdr = (Elf64_Shdr *) &m_mapping[m_ehdr->e_shoff]; }
 
     return 0;
-}
 
-uint64_t Elf::GetBaseAddress(pid_t pid){
+not_elf:
+    RemoveMap();
 
-    char pathname[1024];
-    if(sprintf(pathname, "/proc/%d/maps", pid) < 0) {
-
-        log.PError("String operation failed");
-        b_load_failed = true;
-        return -1;
-    }
-    FILE *fh = fopen(pathname, "r");
-    if(!fh){
-
-        log.PError("File open error");
-        b_load_failed = true;
-        return 0;
-    }
-
-    char *buffer = (char *)calloc(16, sizeof(char) * 16);
-    if(!buffer){
-
-        log.PError("Memory allocation error");
-        b_load_failed = true;
-        return 0;
-    }
-
-    for(int i = 0; i < 16; i++){
-
-        char c = fgetc(fh);
-        if(c == EOF || c == '\0'){
-
-            log.Print("errror reading proc file\n");
-            b_load_failed = true;
-            return 0;
-        }
-
-        else if(c == '-') break;
-
-        buffer[i] = c;
-    }
-
-    fclose(fh);
-
-    uint64_t addr;
-    if(buffer){
-
-        if(sscanf((const char *) buffer, "%lx", &addr) < 0) return -1;
-        free(buffer);
-    }
-
-    return addr;
+failed:
+    b_load_failed = true;
+    return -FAILED;
 }
 
 int Elf::LoadSymbols(){
 
     char *str = nullptr;
     Elf64_Sym *sym = nullptr;
+    Syminfo *syminfo = nullptr;
 
     for(int i = 0; i < m_ehdr->e_shnum; i++){
 
-        if(m_shdr[i].sh_type == SHT_SYMTAB){    /* why not SHT_DYNSYM ? because it contains symbols which are to be relocated and therefore their address is set to 0 */
+        /*
+         * why not SHT_DYNSYM ? because it contains symbols which are to be 
+         * relocated and therefore their address is set to 0 
+         */
+        if(m_shdr[i].sh_type == SHT_SYMTAB){
 
             sym = (Elf64_Sym *) &m_mapping[m_shdr[i].sh_offset];
             str = (char *) &m_mapping[m_shdr[m_shdr[i].sh_link].sh_offset];
@@ -156,17 +119,21 @@ int Elf::LoadSymbols(){
 
                 if(ELF64_ST_TYPE(sym[j].st_info) == STT_FUNC){
 
-                    Syminfo *syminfo = (Syminfo *) malloc(sizeof(Syminfo));
+                    syminfo = (Syminfo *) malloc(sizeof(Syminfo));
                     if(syminfo == nullptr){
 
                         log.PError("Memory allocation failed");
-                        b_load_failed = true;
-                        return -1;
+                        goto failed;
                     }
 
                     if(sym[j].st_value != 0){
 
                         syminfo->m_symbol = (char *) strdup(&str[sym[j].st_name]);
+                        if(!syminfo->m_symbol){
+
+                            log.PError("Memory allocation failed");
+                            goto mem_failed;
+                        }
                         syminfo->m_address = m_base_addr + sym[j].st_value;
                         S_list.push_back(syminfo);
                     }
@@ -174,8 +141,22 @@ int Elf::LoadSymbols(){
             }
         }
     }
-    if(ParseDynamic() == -1) return -1;
+    if(ParseDynamic() == -1) {
+
+        goto dyn_failed;
+    }
     return 0;
+
+dyn_failed:
+    free(syminfo->m_symbol);
+
+mem_failed:
+    free(syminfo);
+
+failed:
+    RemoveMap();
+    b_load_failed = true;
+    return -FAILED;
 }
 
 bool Elf::SearchForPath(char *pathname){
@@ -195,6 +176,9 @@ int Elf::ParseDynamic(void){
     Elf64_Sym *dynsym = nullptr;
     char *dynstr = nullptr;
 
+    char *pathname = nullptr;
+
+    char *buf = nullptr;
     char *lib_path = nullptr;
     std::vector<char *> shared_libs;
     bool b_is_runpath = false;
@@ -219,20 +203,30 @@ int Elf::ParseDynamic(void){
 
                     b_is_runpath = true;
                     lib_path = strdup((char *)&dynstr[dyn[j].d_un.d_val]);
+                    if(!lib_path){
+
+                        log.PError("error allocating memory");
+                        goto failed;
+                    }
                 }else if(dyn[j].d_tag == DT_RPATH){
 
                     if(!b_is_runpath){
 
                         lib_path = strdup((char *)&dynstr[dyn[j].d_un.d_val]);
+                        if(!lib_path){
+
+                            log.PError("error allocating memory");
+                            goto failed;
+                        }
                     }
                 }else if(dyn[j].d_tag == DT_NEEDED){
 
                     if((&dynstr[dyn[j].d_un.d_val]) != nullptr){
-                        char *buf = (char *)calloc(sizeof(char), strlen(&dynstr[dyn[j].d_un.d_val]) + 1);
+                        buf = (char *)calloc(sizeof(char), strlen(&dynstr[dyn[j].d_un.d_val]) + 1);
                         if(!buf){
 
                             log.PError("Momory allocation error");
-                            return -1;
+                            goto failed;
                         }
                         memcpy(buf, &dynstr[dyn[j].d_un.d_val], strlen(&dynstr[dyn[j].d_un.d_val]));
                         shared_libs.push_back(buf);
@@ -246,21 +240,21 @@ int Elf::ParseDynamic(void){
 
         if(lib_path){
 
-            char *pathname = (char *)calloc(sizeof(char), strlen(lib_path) + strlen(shared_libs[i]));
+            pathname = (char *)calloc(sizeof(char), strlen(lib_path) + strlen(shared_libs[i]));
             if(pathname == nullptr){
 
                 log.PError("Memory allocation error");
-                return -1;
+                goto mem_failed;
             }
             if(strncpy(pathname, lib_path, strlen(lib_path)) == nullptr){
 
                 log.PError("String operation failed");
-                return -1;
+                goto str_failed;
             }
             if(strcat(pathname, shared_libs[i]) == nullptr){
 
                 log.PError("String operation failed");
-                return -1;
+                goto str_failed;
             }
 
             if(SearchForPath(pathname))
@@ -268,27 +262,26 @@ int Elf::ParseDynamic(void){
             else
                 P_list.push_back(pathname);
 
-
         }else{
 
             const char *def_lib = "/lib/";
 
-            char *pathname = (char *)calloc(sizeof(char), strlen(def_lib) + strlen(shared_libs[i]) + 3); 
+            pathname = (char *)calloc(sizeof(char), strlen(def_lib) + strlen(shared_libs[i]) + 3); 
             if(pathname == nullptr){
 
                 log.PError("Memory alloction failed");
-                return -1;
+                goto mem_failed;
             }
 
             if(strncpy(pathname, def_lib, strlen(def_lib)) == nullptr){
 
                 log.PError("String operation failed");
-                return -1;
+                goto str_failed;
             }
             if(strcat(pathname, shared_libs[i]) == nullptr){
 
                 log.PError("String operation failed");
-                return -1;
+                goto str_failed;
             }
 
             log.Debug("next search path: %s\tcurrent index :%d\t total number of libraries :%d\n", pathname, i, shared_libs.size());
@@ -312,7 +305,21 @@ int Elf::ParseDynamic(void){
     }
     shared_libs.clear();
 
-    return 0;       // NOTE modify this so this function will recurse
+    return 0;
+
+str_failed:
+    free(pathname);
+
+mem_failed:
+    if(lib_path)
+        free(lib_path);
+    else if(buf)
+        free(buf);
+
+failed:
+    RemoveMap();
+    b_load_failed = true;
+    return -1;
 }
 
 void Elf::ListSyms(int prange){

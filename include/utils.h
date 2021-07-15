@@ -1,7 +1,7 @@
-#pragma once
+#ifndef UTILS_H
+#define UTILS_H
 
-#include "main.h"
-
-void ParseArguments(Debug& debug, int argc, char *argv[]);
 void PrintUsage(void);
 void PrintHelp(void);
+
+#endif /* utils.h */

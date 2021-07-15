@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEBUG_H
+#define DEBUG_H
 
 #include <sys/types.h>
 #include <vector>
@@ -6,9 +7,6 @@
 #include "libelfin/elf/elf++.hh"
 #include "libelfin/dwarf/dwarf++.hh"
 #include "libelfin/dwarf/data.hh"
-#include "log.h"
-
-static Log log(DEBUG | PRINT | PROMPT | ERROR | INFO | PERROR);
 
 class Debug{
 
@@ -56,3 +54,5 @@ class Debug{
         bool GetProgramState(void) const;
         bool GetSyscallState(void) const;
 };
+
+#endif /* debug.h */

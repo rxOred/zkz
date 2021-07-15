@@ -1,12 +1,14 @@
+#ifndef BIN_H
+#define BIN_H
+
+#include <elf.h>
 #include <bits/stdint-uintn.h>
 #include <vector>
 #include <iostream>
 #include <cstring>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <elf.h>
 #include <sys/mman.h>
-#include "log.h"
 
 typedef struct {
     uint64_t m_address;
@@ -20,6 +22,7 @@ class Elf{
         /* size of mapped buffer and mapped buffer */
         int m_size;
         uint8_t *m_mapping;
+        uint64_t m_base_addr;
 
         /* elf section header information */
         Elf64_Ehdr *m_ehdr;
@@ -28,14 +31,12 @@ class Elf{
 
     public:
 
-        uint64_t m_base_addr;
         bool b_load_failed;
         std::vector<char *> P_list;     /* list of pathnames already searched */
         std::vector<Syminfo *> S_list;   /* list of Syminfo */
 
-        Elf(pid_t pid, const char *pathname)
-            : b_load_failed(false), m_size(0), m_ehdr(nullptr), m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr){
-            m_base_addr = GetBaseAddress(pid);
+        Elf(pid_t pid, const char *pathname, uint64_t base_addr)
+            : b_load_failed(false), m_size(0), m_base_addr(base_addr), m_ehdr(nullptr), m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr){
             P_list.push_back(strdup(pathname));
         }
 
@@ -67,9 +68,10 @@ class Elf{
         bool SearchForPath(char *pathname);
         int OpenFile(int index);
         int LoadFile(int fd, int size);
-        uint64_t GetBaseAddress(pid_t pid);
         int LoadSymbols();
         void RemoveMap(void);
         int ParseDynamic(void);
         void ListSyms(int prange);
 };
+
+#endif /* bin.h */

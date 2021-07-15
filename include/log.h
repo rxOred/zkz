@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LOG_H
+#define LOG_H
 
 #include <bits/stdint-uintn.h>
 #include <cstdio>
@@ -312,3 +313,7 @@ class Log {
     private:
         uint8_t m_state;
 };
+
+static Log log(DEBUG | PRINT | PROMPT | ERROR | INFO | PERROR);
+
+#endif /* log.h */
