@@ -6,3 +6,10 @@
 - Set / Get register information
 - Source lines - memory addresses mapping
 - System call tracing
+
+## TODO
+
+- Code injection
+- System call injection
+- Search for patterns in memory (using ptrace)
+- Profiling
