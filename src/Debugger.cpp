@@ -52,7 +52,7 @@ int Main::WaitForProcess(void) {
     if(WIFEXITED(wstatus)){
 
         log.Info("Process terminated with %d\n", wstatus);
-        m_debug.SetProgramState(false);     // no other function should set program state to false
+        m_debug.SetProgramState(false);
         return EXIT_STATUS;
     }
     else if(WIFSTOPPED(wstatus)){
@@ -72,7 +72,9 @@ int Main::RemoveAllBreakpoints(BreakpointList& li) const{
 
     for (int i = 0; i < li.GetNoOfBreakpoints(); i++){
 
-        /* chech errors properly */
+        /* 
+         * chech errors properly 
+         */
         if(li.RemoveElement(m_debug, i + 1) < 0)
             return -1;
     }
@@ -82,7 +84,7 @@ int Main::RemoveAllBreakpoints(BreakpointList& li) const{
 int Main::DisableBreakpoint(BreakpointList& li, int breakpoint_number) const{
 
     Breakpoint *b = li.GetElementByBreakpointNumber(breakpoint_number);
-    if(b == nullptr){   // if returns null, breakpoint is not found
+    if(b == nullptr){
 
         log.Error("Breakpoint %d not found\n", breakpoint_number); 
     }
@@ -92,7 +94,9 @@ int Main::DisableBreakpoint(BreakpointList& li, int breakpoint_number) const{
     return 0;
 }
 
-/* to restore the instruction to its previous state before placing the breakpoint */
+/* 
+ * to restore the instruction to its previous state before placing the breakpoint 
+ */
 int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address) {
 
     log.Debug("restore address %x\n", address);
@@ -195,7 +199,8 @@ int Main::StepAuto(BreakpointList& li) {
 
             if(b->GetState()){
 
-                log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.rip -1, b->m_breakpoint_number);
+                log.Info("Stopped execution at %x : breakpoint number %d\n", 
+                        m_regs.rip -1, b->m_breakpoint_number);
 
                 RestoreBreakpoint(b, m_regs.rip - 1);
                 return 0;
@@ -225,11 +230,11 @@ int Main::StepX(BreakpointList& li, int number_of_steps) {
         int ret = WaitForProcess();
         if(ret == EXIT_STATUS){
 
-            return EXIT_STATUS;    //handle this, dont accept any commands except run, reset
+            return EXIT_STATUS;
         }
         else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS){
 
-            if(m_debug.GetInforeg()){   // if info reg is set, we print info reg in every damn step
+            if(m_debug.GetInforeg()){
 
                 InfoRegistersAll(m_debug, m_regs);
             }
@@ -240,18 +245,15 @@ int Main::StepX(BreakpointList& li, int number_of_steps) {
                 return -1;
             }
 
-            //we have to check for breakpoints and stuff like that.. not syscalls.
             Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);
-            if(b == nullptr){
-
-                // we are not in a breakpoint and we dont give a shit about syscalls here
+            if(b == nullptr)
                 continue;
-            }
             else{
 
-                if(b->GetState()){     // return true means breakpoint is enabled
+                if(b->GetState()){
 
-                    log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.rip -1, b->m_breakpoint_number);
+                    log.Info("Stopped execution at %x : breakpoint number %d\n", 
+                            m_regs.rip -1, b->m_breakpoint_number);
 
                     if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
                     return 0;
@@ -272,7 +274,10 @@ int Main::StepX(BreakpointList& li, int number_of_steps) {
 
 int Main::ContinueExecution(BreakpointList& li){
 
-    if(m_debug.GetSyscallState()){     // if is_sys_stopped == true, we are settting it to false because we continue execution.
+     /* if is_sys_stopped == true, we are settting it to false 
+      * because we continue execution.
+      */
+    if(m_debug.GetSyscallState()){
 
         m_debug.SetSyscallState(false);
     }
@@ -301,7 +306,7 @@ int Main::ContinueExecution(BreakpointList& li){
 
         return EXIT_STATUS;
     }
-    if(ret == STOPPED_STATUS){    //else, program has stopped
+    if(ret == STOPPED_STATUS){
 
         if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
 
@@ -311,12 +316,16 @@ int Main::ContinueExecution(BreakpointList& li){
 
         log.Debug("Prcoess stopped at address %x\n", m_regs.rip - 1);
 
-        Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);  //if this return null, we are not in a breakpoint, so reason for SIGSTOP/SIGTRAP must be a system call if systrace is enabled
+        /* 
+         * if this return null, we are not in a breakpoint, so reason for 
+         * SIGSTOP/SIGTRAP must be a system call if systrace is enabled
+         */
+        Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);
         if(b == nullptr){
 
-            if(m_debug.GetSystrace()){   // if user specified sys trace, then stop and let him execute commands
+            if(m_debug.GetSystrace()){
                 log.Info("System call intercepted: %x\n", m_regs.rax);
-                m_debug.SetSyscallState(true);      // we set system call state to true
+                m_debug.SetSyscallState(true);
 
                 if(m_debug.GetInforeg()){
 
@@ -325,7 +334,7 @@ int Main::ContinueExecution(BreakpointList& li){
                 }
                 return 0;
             }
-            else {      //if systrace is not enabled, this must be something else, so we just continue
+            else {
 
                 int ret = ContinueExecution(li);
                 if(ret == EXIT_STATUS) return EXIT_STATUS;
@@ -336,10 +345,13 @@ int Main::ContinueExecution(BreakpointList& li){
         else{
 
             log.Debug("Breakpoint hit\n");
-            // we have to restore breakpoint instruction before continue
-            if(b->GetState()){     // if return true, breakpoint is enabled
+            /*
+             * we have to restore breakpoint instruction before continue
+             */
+            if(b->GetState()){ 
 
-                log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.rip -1, b->m_breakpoint_number);
+                log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.rip -1, 
+                        b->m_breakpoint_number);
 
                 if(m_debug.GetInforeg()){
 
@@ -351,7 +363,9 @@ int Main::ContinueExecution(BreakpointList& li){
             }
             else{
 
-                // if breakpoint is disabled, go restore the instruction and continue execution
+                /*
+                 * if breakpoint is disabled, go restore the instruction and continue execution
+                 */
                 log.Debug("Disabled breakpoint\n");
                 if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
                 int ret = ContinueExecution(li);
@@ -369,8 +383,10 @@ void Main::ParseLines(const dwarf::line_table &lt, int unit_number) const{
 
     for (auto &line : lt){
 
-        log.Debug("line number :%d\t address :%x\n", line.line, m_base_addr + line.address);
-        m_line_info_ptr->AppendElement(line.line, m_base_addr + line.address, unit_number);
+        log.Debug("line number :%d\t address :%x\n", line.line, 
+                m_base_addr + line.address);
+        m_line_info_ptr->AppendElement(line.line, m_base_addr + 
+                line.address, unit_number);
     }
 }
 
@@ -430,7 +446,8 @@ int Main::MainLoop(void){
         }
 
         /* reset is used to restart a process, while it is still running or exited */
-        if(command.compare("run") == 0 || command.compare("r") == 0 || command.compare("continue") == 0 || command.compare("c") == 0){
+        if(command.compare("run") == 0 || command.compare("r") == 0 || 
+                command.compare("continue") == 0 || command.compare("c") == 0){
 
             if(!m_debug.GetProgramState()){
 
@@ -442,9 +459,12 @@ int Main::MainLoop(void){
                 }
             }
             int ret = ContinueExecution(li);
-            if(ret == EXIT_STATUS){     // E  IT_STATUS defines exit of the m_debugee, but we dont have to care about setting program state because, wait_for_process is taking care of it
+            if(ret == EXIT_STATUS){
 
-                if(m_debug.GetPathname() == nullptr && m_debug.GetPid() != 0){    // because we cant start a process without knowning its pathname
+                /*
+                 * because we cant start a process without knowning its pathname
+                 */
+                if(m_debug.GetPathname() == nullptr && m_debug.GetPid() != 0){
 
                     log.Prompt("Press any key to exit zkz");
                     getchar();
@@ -452,7 +472,11 @@ int Main::MainLoop(void){
                 }
                 else if (m_debug.GetPathname() != nullptr){
 
-                    continue;       // if pathname is there, we can continue and let user to enter reset command
+                    /* 
+                     * if pathname is there, we can continue and let user 
+                     * to enter reset command
+                     */
+                    continue;
                 }
             }else if(ret == -1) return -1;
         }
@@ -596,7 +620,8 @@ int Main::MainLoop(void){
                         try{
 
                             default_compilation_unit = std::stoi(commands[1], nullptr, 10);
-                            if(default_compilation_unit < 0 || default_compilation_unit > m_line_info_ptr->GetNoOfCompilationUnits()){
+                            if(default_compilation_unit < 0 || 
+                                    default_compilation_unit > m_line_info_ptr->GetNoOfCompilationUnits()){
 
                                 log.Error("Compilation unit number is not in range\n");
                                 continue;
@@ -648,7 +673,8 @@ int Main::MainLoop(void){
 
                         try{
 
-                            address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, std::stoi(word, nullptr, 10));
+                            address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, 
+                                    std::stoi(word, nullptr, 10));
                             if(address < 0){
 
                                 log.Error("Address for corresponding line is not found\n");
@@ -672,7 +698,8 @@ int Main::MainLoop(void){
                         for (int i = 1; i < commands.size(); i++){
                             try{
 
-                                address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, std::stoi(commands[i], nullptr, 10));
+                                address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, 
+                                        std::stoi(commands[i], nullptr, 10));
                             }catch (std::out_of_range& err_1) {
 
                                 log.Error("Invalid range %s\n", err_1.what());
@@ -682,8 +709,11 @@ int Main::MainLoop(void){
                                 log.Error("Invalid line number %s\n", err_2.what());
                                 continue;
                             }
-
-                            if(address < 0){        // if this true, indicates that address is specified line does not match to an address;
+                            /* 
+                             * if this true, indicates that address is specified line 
+                             * does not match to an address
+                             */
+                            if(address < 0){
 
                                 log.Error("Address for corresponding line is not found\n");
                                 continue;
@@ -706,7 +736,10 @@ int Main::MainLoop(void){
 
         else if(commands[0].compare("break")  == 0 || commands[0].compare("b") == 0){
 
-            /* check length of commands vector is less than 2, if yes, user havent mentioned ann address to place a breakpoint */
+            /* 
+             * check length of commands vector is less than 2, if yes, 
+             * user havent mentioned ann address to place a breakpoint 
+             */
             if(m_debug.GetProgramState()){
 
                 if(commands.size() <= 1){
@@ -742,10 +775,16 @@ int Main::MainLoop(void){
                     if(PlaceBreakpoint(li, address) < 0) continue;
                 }
 
-                /* if user has specified more addresses than 1, we are going to place breakpoints in all of those addresses */
+                /* 
+                 * if user has specified more addresses than 1, we are going 
+                 * to place breakpoints in all of those addresses 
+                 */
                 else{
 
-                    /* we are staring from second element [1st index] of the vector because 0th index is the command */
+                    /*
+                     * we are staring from second element [1st index] of the 
+                     * vector because 0th index is the command 
+                     */
                     for (int i = 1; i < static_cast<int>(commands.size()); i++){
 
                         uint64_t address;
@@ -771,7 +810,8 @@ int Main::MainLoop(void){
                 continue;
             }
         }
-        else if(command.compare("info registers") == 0 || command.compare("i r") == 0 || command.compare("i registers") == 0 || command.compare("info r") == 0){
+        else if(command.compare("info registers") == 0 || command.compare("i r") == 0 || 
+                command.compare("i registers") == 0 || command.compare("info r") == 0){
 
             if(m_debug.GetProgramState()){
                 InfoRegistersAll(m_debug, m_regs);
@@ -794,7 +834,8 @@ int Main::MainLoop(void){
                 continue;
             }
         }
-        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 || commands[0].compare("d") == 0){
+        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 || 
+                commands[0].compare("d") == 0){
 
             if(m_debug.GetProgramState()){
                 if(commands[1].empty()){
@@ -1201,7 +1242,11 @@ int Main::StartProcess(void) {
             }
             else if(ret == SIGNALED_STATUS || ret == STOPPED_STATUS){
 
-                m_debug.SetProgramState(true);      // no one should set this to true except start_process an attach_process functions, which are related to start the process
+                m_debug.SetProgramState(true);
+                /* 
+                 * no one should set this to true except start_process an 
+                 * attach_process functions, which are related to start the process
+                 */
                 m_debug.SetPid(pid);
                 return 0;
             }
@@ -1254,7 +1299,7 @@ void Main::ParseArguments(int argc, char *argv[]){
             pathname[count] = nullptr;
             m_debug.SetPathname(pathname);
             m_debug.SetCount(count);
-            i = j - 1;      // j - 1 because we loop to the next flag too
+            i = j - 1;
         }
         else if(strcmp(argv[i], "-p") == 0){
 
@@ -1262,7 +1307,10 @@ void Main::ParseArguments(int argc, char *argv[]){
             if(!argv[i] || i == argc) {
 
                 log.Error("Expected a process id\n");
-                PrintUsage();     /* user have to specify a process id */
+                /* 
+                 * user have to specify a process id 
+                 */
+                PrintUsage();
                 exit(EXIT_FAILURE);
             }
             else m_debug.SetPid(atoi(argv[i]));
@@ -1303,7 +1351,7 @@ void Main::ParseArguments(int argc, char *argv[]){
 
 int Main::Debugger(void){
 
-    if((m_debug.GetPathname()[0] != nullptr) && (m_debug.GetPid() != 0)){    //you cant use both 
+    if((m_debug.GetPathname()[0] != nullptr) && (m_debug.GetPid() != 0)){
         PrintUsage();
     }
     else if(m_debug.GetPid() != 0){
