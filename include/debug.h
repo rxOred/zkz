@@ -58,39 +58,95 @@ class Debug{
 
         ~Debug();
 
-        void SetDwarf(void);
-        void SetSym(void);
+        inline void SetDwarf(void){
 
-        /*
-         * set is_systrace (once these are true, cannot be undone
-         */
-        void SetSystrace(void);
+            b_dwarf_state = false;
+        }
 
-        /*
-         * set is_runiing
-         */
-        void SetInforeg(void);
+        inline void SetSym(void){
 
-        /*
-         * set process id 
-         */
-        void SetPid(pid_t pid);
+            b_sym_state = false;
+        }
 
+        inline void SetSystrace(void){
 
-        void SetPathname(char **pathname);
-        void SetCount(int count);
-        void SetProgramState(bool state);
-        void SetSyscallState(bool state);
+            m_arguments.is_systrace = true;
+        }
 
-        bool GetDwarfState(void) const;
-        bool GetSymState(void) const;
-        bool GetSystrace(void) const;
-        bool GetInforeg(void) const;
-        pid_t GetPid(void) const;
-        char **GetPathname(void) const;
-        int GetCount(void) const;
-        bool GetProgramState(void) const;
-        bool GetSyscallState(void) const;
+        inline void SetInforeg(void){
+
+            m_arguments.b_is_inforeg = true;
+        }
+
+        inline void SetPid(pid_t pid){
+
+            this->m_arguments.m_dbg.pid = pid;
+        }
+
+        inline void SetPathname(char **pathname){
+
+            this->m_arguments.m_dbg.pathname = pathname;
+        }
+
+        inline void SetCount(int count){
+
+            this->m_arguments.m_dbg.count = count;
+        }
+
+        inline void SetProgramState(bool state){
+
+            b_is_running = state;
+        }
+
+        inline void SetSyscallState(bool state){
+
+            b_is_sys_stopped = state;
+        }
+
+        inline bool GetDwarfState(void) const {
+
+            return b_dwarf_state;
+        }
+
+        inline bool GetSymState(void) const {
+
+            return b_sym_state;
+        }
+
+        inline bool GetSystrace(void) const{
+
+            return m_arguments.is_systrace;
+        }
+
+        inline bool GetInforeg(void) const{
+
+            return m_arguments.b_is_inforeg;
+        }
+
+        inline pid_t GetPid(void) const{
+
+            return m_arguments.m_dbg.pid;
+        }
+
+        inline char **GetPathname(void) const{
+
+            return m_arguments.m_dbg.pathname;
+        }
+
+        inline int GetCount(void) const{
+
+            return m_arguments.m_dbg.count;
+        }
+
+        inline bool GetProgramState(void) const{
+
+            return b_is_running;
+        }
+
+        inline bool GetSyscallState(void) const{
+
+            return b_is_sys_stopped;
+        }
 };
 
 #endif /* DEBUG_H */

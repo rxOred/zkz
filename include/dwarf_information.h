@@ -36,11 +36,36 @@ class DebugLineInfo{
     public:
         ~DebugLineInfo();
 
-        void AppendElement(int line_number, uint64_t address, int unit_number);
-        uint64_t GetElementByIndex(int index);
+        inline void AppendElement(int line_number, uint64_t address, 
+                int unit_number){
+
+            Lineinfo *l = new Lineinfo(line_number, address, unit_number);
+            D_lines.push_back(l);
+        }
+
+        /*
+         * this method is kinda useless rn
+         */
+        inline uint64_t GetElementByIndex(int index){
+
+            return D_lines[index]->m_address;
+        }
+
+        inline int GetNoOfCompilationUnits(void){
+
+            int max = 0;
+            for (auto x = D_lines.begin(); x != D_lines.end(); x++){
+
+                if((*x)->m_unit_number > max){
+
+                    max = (*x)->m_unit_number;
+                }
+            }
+            return max;
+        }
+
         uint64_t GetAddressByLine(int compilation_unit, int line_number);
         uint64_t GatBaseAddress(pid_t pid);
-        int GetNoOfCompilationUnits(void);
         int GetMaxLineNumber(int compilation_unit);
         int GetMinLineNumber(int compilation_unit);
         int ListSrcLines(int compilation_unit);
