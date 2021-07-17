@@ -25,172 +25,106 @@ int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
     return 0;
 }
 
-#define RAX     regs.rax
-#define RCX     regs.rcx
-#define RDX     regs.rdx
-#define RBX     regs.rbx
-#define RSP     regs.rsp
-#define RBP     regs.rbp
-#define RSI     regs.rsi
-#define RDI     regs.rdi
-#define R8      regs.r8
-#define R9      regs.r9
-#define R10     regs.r10
-#define R11     regs.r11
-#define R12     regs.r12
-#define R13     regs.r13 
-#define R14     regs.r14
-#define R15     regs.r15
-/* 
- * TODO rip, eflags and other registers
- */
-
-#define DEFINE_HANDLER(__reg) static void reg_handler_##__reg(struct user_regs_struct& regs){ \
+#define DEFINE_INFO_HANDLER(__reg) static void reg_info_handler_##__reg(struct user_regs_struct& regs){ \
         log.Print("%s : %lx\n", #__reg, regs.__reg);            \
         return;                                                 \
     }
 
-DEFINE_HANDLER(rax)
-DEFINE_HANDLER(rcx)
-DEFINE_HANDLER(rdx)
-DEFINE_HANDLER(rbx)
-DEFINE_HANDLER(rsp)
-DEFINE_HANDLER(rbp)
-DEFINE_HANDLER(rsi)
-DEFINE_HANDLER(rdi)
-DEFINE_HANDLER(r8)
-DEFINE_HANDLER(r9)
-DEFINE_HANDLER(r10)
-DEFINE_HANDLER(r11)
-DEFINE_HANDLER(r12)
-DEFINE_HANDLER(r13)
-DEFINE_HANDLER(r14)
-DEFINE_HANDLER(r15)
+#define DEFINE_SET_HANDLER(__reg) static void reg_set_handler_##__reg(struct user_regs_struct& regs, uint64_t value){     \
+    regs.__reg = value;                                     \
+    return;                                                 \
+}
+
+DEFINE_SET_HANDLER(rax)
+DEFINE_SET_HANDLER(rcx)
+DEFINE_SET_HANDLER(rdx)
+DEFINE_SET_HANDLER(rbx)
+DEFINE_SET_HANDLER(rsp)
+DEFINE_SET_HANDLER(rbp)
+DEFINE_SET_HANDLER(rsi)
+DEFINE_SET_HANDLER(rdi)
+DEFINE_SET_HANDLER(r8)
+DEFINE_SET_HANDLER(r9)
+DEFINE_SET_HANDLER(r10)
+DEFINE_SET_HANDLER(r11)
+DEFINE_SET_HANDLER(r12)
+DEFINE_SET_HANDLER(r13)
+DEFINE_SET_HANDLER(r14)
+DEFINE_SET_HANDLER(r15)
+
+
+DEFINE_INFO_HANDLER(rax)
+DEFINE_INFO_HANDLER(rcx)
+DEFINE_INFO_HANDLER(rdx)
+DEFINE_INFO_HANDLER(rbx)
+DEFINE_INFO_HANDLER(rsp)
+DEFINE_INFO_HANDLER(rbp)
+DEFINE_INFO_HANDLER(rsi)
+DEFINE_INFO_HANDLER(rdi)
+DEFINE_INFO_HANDLER(r8)
+DEFINE_INFO_HANDLER(r9)
+DEFINE_INFO_HANDLER(r10)
+DEFINE_INFO_HANDLER(r11)
+DEFINE_INFO_HANDLER(r12)
+DEFINE_INFO_HANDLER(r13)
+DEFINE_INFO_HANDLER(r14)
+DEFINE_INFO_HANDLER(r15)
 
 struct reg{
     char regname[6];
-    void (*handler)(struct user_regs_struct&);
+    void (*info_handler)(struct user_regs_struct&);
+    void (*set_handler)(struct user_regs_struct&, uint64_t);
 };
 
 int InfoRegister(Debug& debug, struct user_regs_struct& regs, 
-        std::string regname){
+        std::string reg){
 
-    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, regs) < 0) {
+    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, &regs) < 0) {
 
         log.PError("Ptrace failed");
         return -1;
     }
 
     struct reg registers[] = {
-        {"rax", reg_handler_rax}, {"rcx", reg_handler_rcx},
-        {"rdx", reg_handler_rdx}, {"rbx", reg_handler_rbx},
-        {"rsp", reg_handler_rsp}, {"rbp", reg_handler_rbp},
-        {"rsi", reg_handler_rsi}, {"rdi", reg_handler_rdi},
-        {"r8", reg_handler_r8}, {"r9", reg_handler_r9},
-        {"r10", reg_handler_r10}, {"r11", reg_handler_r11},
-        {"r12", reg_handler_r12}, {"r13", reg_handler_r13},
-        {"r14", reg_handler_r14}, {"r15", reg_handler_r15}
+        {"rax", reg_info_handler_rax, nullptr}, {"rcx", reg_info_handler_rcx, nullptr},
+        {"rdx", reg_info_handler_rdx, nullptr}, {"rbx", reg_info_handler_rbx, nullptr},
+        {"rsp", reg_info_handler_rsp, nullptr}, {"rbp", reg_info_handler_rbp, nullptr},
+        {"rsi", reg_info_handler_rsi, nullptr}, {"rdi", reg_info_handler_rdi, nullptr},
+        {"r8", reg_info_handler_r8, nullptr}, {"r9", reg_info_handler_r9, nullptr},
+        {"r10", reg_info_handler_r10, nullptr}, {"r11", reg_info_handler_r11, nullptr},
+        {"r12", reg_info_handler_r12, nullptr}, {"r13", reg_info_handler_r13, nullptr},
+        {"r14", reg_info_handler_r14, nullptr}, {"r15", reg_info_handler_r15, nullptr}
     }; 
-    for(int i = 0; sizeof(registers) / sizeof(registers[0]); i++){
-
-        if(!strcmp(registers[i].regname, regname.c_str())){
-
-            registers[i].handler(regs);
-        }
-    }
+    for(int i = 0; sizeof(registers) / sizeof(struct reg); i++)
+        if(!strcmp(registers[i].regname, reg.c_str()))
+            registers[i].info_handler(regs);
 
     return 0;
 }
 
-
-int SetRegister(Debug& debug, struct user_regs_struct& regs, 
+int SetRegister(Debug &debug, struct user_regs_struct &regs, 
         std::string reg, uint64_t value){
 
-    static std::vector<std::string> registers = {"rax", "rcx", "rdx", 
-        "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", 
-        "r12", "r13", "r14", "r15"};
+    struct reg registers[] = {
+        {"rax", nullptr, reg_set_handler_rax}, {"rcx", nullptr, reg_set_handler_rcx},
+        {"rdx", nullptr, reg_set_handler_rdx}, {"rbx", nullptr, reg_set_handler_rbx},
+        {"rsp", nullptr, reg_set_handler_rsp}, {"rbp", nullptr, reg_set_handler_rbp},
+        {"rsi", nullptr, reg_set_handler_rsi}, {"rdi", nullptr, reg_set_handler_rdi},
+        {"r8", nullptr, reg_set_handler_r8}, {"r9", nullptr, reg_set_handler_r9},
+        {"r10", nullptr, reg_set_handler_r10}, {"r11", nullptr, reg_set_handler_r11},
+        {"r12", nullptr, reg_set_handler_r12}, {"r13", nullptr, reg_set_handler_r13},
+        {"r14", nullptr, reg_set_handler_r14}, {"r15", nullptr, reg_set_handler_r15}
+    };
 
-    for(int i = 0; i < registers.size(); i++){
+    for(int i = 0; i < sizeof(registers) /  sizeof(struct reg); i++)
+        if(!strcmp(registers[i].regname, reg.c_str()))
+            registers[i].set_handler(regs, value);
 
-        if(registers[i].compare(reg)){
+    if(ptrace(PTRACE_SETREGS, debug.GetPid(), nullptr, regs) < 0){
 
-            switch(i){
-
-            case 0:
-                RAX = value;
-                break;
-
-            case 1:
-                RCX = value;
-                break;
-
-            case 2:
-                RDX = value;
-                break;
-
-            case 3:
-                RBX = value;
-                break;
-
-            case 4:
-                RSP = value;
-                break;
-
-            case 5:
-                RBP = value;
-                break;
-
-            case 6:
-                RSI = value;
-                break;
-
-            case 7:
-                RDI = value;
-                break;
-
-            case 8:
-                R8 = value;
-                break;
-
-            case 9:
-                R9 = value;
-                break;
-
-            case 10:
-                R10 = value;
-                break;
-
-            case 11:
-                R11 = value;
-                break;
-
-            case 12:
-                R12 = value;
-                break;
-
-            case 13:
-                R13 = value;
-                break;
-
-            case 14:
-                R14 = value;
-                break;
-
-            case 15:
-                R15 = value;
-                break;
-            }
-
-            if(ptrace(PTRACE_SETREGS, debug.GetPid(), nullptr, &regs) < 0){
-
-                log.PError("Ptrace error");
-                return -1;
-            }
-
-            return 0;
-        }
+        log.PError("Ptrace failed");
+        return -1;
     }
-    //registers.clear();
-    log.Error("Invalid register name\n");
+
     return 0;
 }
