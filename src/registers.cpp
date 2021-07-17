@@ -45,70 +45,27 @@ int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
  * TODO rip, eflags and other registers
  */
 
-static void handler_rax(struct user_regs_struct& regs){
+#define DEFINE_HANDLER(__reg) static void reg_handler_##__reg(struct user_regs_struct& regs){ \
+        log.Print("%s : %lx\n", #__reg, regs.__reg);            \
+        return;                                                 \
+    }
 
-
-}
-static void handler_rcx(struct user_regs_struct& regs){
-
-
-}
-static void handler_rdx(struct user_regs_struct& regs){
-
-
-}
-static void handler_rbx(struct user_regs_struct& regs){
-
-
-}
-static void handler_rsp(struct user_regs_struct& regs){
-
-
-}
-static void handler_rbp(struct user_regs_struct& regs){
-
-
-}
-static void handler_rsi(struct user_regs_struct& regs){
-
-
-}
-static void handler_rdi(struct user_regs_struct& regs){
-
-
-}
-static void handler_r8(struct user_regs_struct& regs){
-
-
-}
-static void handler_r9(struct user_regs_struct& regs){
-
-
-}
-static void handler_r10(struct user_regs_struct& regs){
-
-
-}
-static void handler_r11(struct user_regs_struct& regs){
-
-
-}
-static void handler_r12(struct user_regs_struct& regs){
-
-
-}
-static void handler_r13(struct user_regs_struct& regs){
-
-
-}
-static void handler_r14(struct user_regs_struct& regs){
-
-
-}
-static void handler_r15(struct user_regs_struct& regs){
-
-
-}
+DEFINE_HANDLER(rax)
+DEFINE_HANDLER(rcx)
+DEFINE_HANDLER(rdx)
+DEFINE_HANDLER(rbx)
+DEFINE_HANDLER(rsp)
+DEFINE_HANDLER(rbp)
+DEFINE_HANDLER(rsi)
+DEFINE_HANDLER(rdi)
+DEFINE_HANDLER(r8)
+DEFINE_HANDLER(r9)
+DEFINE_HANDLER(r10)
+DEFINE_HANDLER(r11)
+DEFINE_HANDLER(r12)
+DEFINE_HANDLER(r13)
+DEFINE_HANDLER(r14)
+DEFINE_HANDLER(r15)
 
 struct reg{
     char regname[6];
@@ -125,14 +82,14 @@ int InfoRegister(Debug& debug, struct user_regs_struct& regs,
     }
 
     struct reg registers[] = {
-        {"rax", handler_rax}, {"rcx", handler_rcx},
-        {"rdx", handler_rdx}, {"rbx", handler_rbx},
-        {"rsp", handler_rsp}, {"rbp", handler_rbp},
-        {"rsi", handler_rsi}, {"rdi", handler_rdi},
-        {"r8", handler_r8}, {"r9", handler_r9},
-        {"r10", handler_r10}, {"r11", handler_r11},
-        {"r12", handler_r12}, {"r13", handler_r13},
-        {"r14", handler_r14}, {"r15", handler_r15}
+        {"rax", reg_handler_rax}, {"rcx", reg_handler_rcx},
+        {"rdx", reg_handler_rdx}, {"rbx", reg_handler_rbx},
+        {"rsp", reg_handler_rsp}, {"rbp", reg_handler_rbp},
+        {"rsi", reg_handler_rsi}, {"rdi", reg_handler_rdi},
+        {"r8", reg_handler_r8}, {"r9", reg_handler_r9},
+        {"r10", reg_handler_r10}, {"r11", reg_handler_r11},
+        {"r12", reg_handler_r12}, {"r13", reg_handler_r13},
+        {"r14", reg_handler_r14}, {"r15", reg_handler_r15}
     }; 
     for(int i = 0; sizeof(registers) / sizeof(registers[0]); i++){
 
@@ -141,6 +98,8 @@ int InfoRegister(Debug& debug, struct user_regs_struct& regs,
             registers[i].handler(regs);
         }
     }
+
+    return 0;
 }
 
 
