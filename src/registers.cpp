@@ -1,11 +1,13 @@
 #include "registers.h"
 #include "log.h"
 #include <bits/stdint-uintn.h>
+#include <string>
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <vector>
 #include <cstdio>
 #include <stdlib.h>
+#include <string.h>
 
 int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
 
@@ -39,40 +41,115 @@ int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
 #define R13     regs.r13 
 #define R14     regs.r14
 #define R15     regs.r15
+/* 
+ * TODO rip, eflags and other registers
+ */
 
-int InfoRegister(Debug& debug, struct user_regs_struct& regs, std::string reg){
+static void handler_rax(struct user_regs_struct& regs){
 
-    static std::map<unsigned long long int, std::string> registers = {
-        {RAX, "rax"}, {RCX, "rcx"}, {RDX,"rdx"}, 
-        {RBX, "rbx"}, {RSP, "rsp"}, {RBP,"rbp"},
-        {RSI, "rsi"}, {RDI, "rdi"}, {R8, "r8"}, 
-        {R9, "r9"}, {R10,"r10"}, {R11, "r11"}, 
-        {R12, "r12"}, {R13, "r13"}, {R14, "r14"}, 
-        {R15, "r15"}
-    };
 
-    std::map<unsigned long long int, std::string>::iterator cursor;
+}
+static void handler_rcx(struct user_regs_struct& regs){
 
-    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, regs) < 0){
+
+}
+static void handler_rdx(struct user_regs_struct& regs){
+
+
+}
+static void handler_rbx(struct user_regs_struct& regs){
+
+
+}
+static void handler_rsp(struct user_regs_struct& regs){
+
+
+}
+static void handler_rbp(struct user_regs_struct& regs){
+
+
+}
+static void handler_rsi(struct user_regs_struct& regs){
+
+
+}
+static void handler_rdi(struct user_regs_struct& regs){
+
+
+}
+static void handler_r8(struct user_regs_struct& regs){
+
+
+}
+static void handler_r9(struct user_regs_struct& regs){
+
+
+}
+static void handler_r10(struct user_regs_struct& regs){
+
+
+}
+static void handler_r11(struct user_regs_struct& regs){
+
+
+}
+static void handler_r12(struct user_regs_struct& regs){
+
+
+}
+static void handler_r13(struct user_regs_struct& regs){
+
+
+}
+static void handler_r14(struct user_regs_struct& regs){
+
+
+}
+static void handler_r15(struct user_regs_struct& regs){
+
+
+}
+
+struct reg{
+    char regname[6];
+    void (*handler)(struct user_regs_struct&);
+};
+
+int InfoRegister(Debug& debug, struct user_regs_struct& regs, 
+        std::string regname){
+
+    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, regs) < 0) {
 
         log.PError("Ptrace failed");
         return -1;
     }
-    for (cursor = registers.begin(); cursor != registers.end(); cursor++){
 
-        if(!cursor->second.compare(reg)){
+    struct reg registers[] = {
+        {"rax", handler_rax}, {"rcx", handler_rcx},
+        {"rdx", handler_rdx}, {"rbx", handler_rbx},
+        {"rsp", handler_rsp}, {"rbp", handler_rbp},
+        {"rsi", handler_rsi}, {"rdi", handler_rdi},
+        {"r8", handler_r8}, {"r9", handler_r9},
+        {"r10", handler_r10}, {"r11", handler_r11},
+        {"r12", handler_r12}, {"r13", handler_r13},
+        {"r14", handler_r14}, {"r15", handler_r15}
+    }; 
+    for(int i = 0; sizeof(registers) / sizeof(registers[0]); i++){
 
-            log.Print("info %s :%x\n", cursor->second.c_str(), cursor->first);
+        if(!strcmp(registers[i].regname, regname.c_str())){
+
+            registers[i].handler(regs);
         }
     }
-
-    //registers.clear();
-    return 0;
 }
 
-int SetRegister(Debug& debug, struct user_regs_struct& regs, std::string reg, uint64_t value){
 
-    static std::vector<std::string> registers = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
+int SetRegister(Debug& debug, struct user_regs_struct& regs, 
+        std::string reg, uint64_t value){
+
+    static std::vector<std::string> registers = {"rax", "rcx", "rdx", 
+        "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", 
+        "r12", "r13", "r14", "r15"};
 
     for(int i = 0; i < registers.size(); i++){
 
