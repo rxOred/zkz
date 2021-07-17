@@ -36,9 +36,6 @@
 #define STOPPED_STATUS 2
 #define SIGNALED_STATUS 3
 
-#define SYMBOLS 0
-#undef SYMBOLS
-
 void Main::KillProcess(pid_t pid) const{
 
     kill(pid, SIGKILL);

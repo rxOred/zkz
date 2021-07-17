@@ -21,7 +21,7 @@ Lineinfo::Lineinfo(int line_number, uint64_t address, int unit_number){
     m_unit_number = unit_number;
 }
 
-int DebugLineInfo::GetNoOfCompilationUnits(void){
+inline int DebugLineInfo::GetNoOfCompilationUnits(void){
 
     int max = 0;
     for (auto x = D_lines.begin(); x != D_lines.end(); x++){
@@ -62,14 +62,17 @@ uint64_t DebugLineInfo::GetAddressByLine(int compilation_unit, int line_number){
     return -1;
 }
 
-void DebugLineInfo::AppendElement(int line_number, uint64_t address, int unit_number){
+inline void DebugLineInfo::AppendElement(int line_number, uint64_t address, int unit_number){
 
     Lineinfo *l = new Lineinfo(line_number, address, unit_number);
 
     D_lines.push_back(l);
 }
 
-uint64_t DebugLineInfo::GetElementByIndex(int index){
+/*
+ * this method is kinda useless rn
+ */
+inline uint64_t DebugLineInfo::GetElementByIndex(int index){
 
     return D_lines[index]->m_address;
 }

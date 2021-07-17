@@ -42,7 +42,7 @@ Elf::~Elf(){
     }
 }
 
-void Elf::RemoveMap(void){
+inline void Elf::RemoveMap(void){
 
     if(m_mapping != nullptr){
 

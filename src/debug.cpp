@@ -23,92 +23,92 @@ Debug::~Debug(){
     }
 }
 
-void Debug::SetDwarf(void){
+inline void Debug::SetDwarf(void){
 
     b_dwarf_state = false;
 }
 
-void Debug::SetSym(void){
+inline void Debug::SetSym(void){
 
     b_sym_state = false;
 }
 
-void Debug::SetSystrace(void){
+inline void Debug::SetSystrace(void){
 
     m_arguments.is_systrace = true;
 }
 
-void Debug::SetInforeg(void){
+inline void Debug::SetInforeg(void){
 
     m_arguments.b_is_inforeg = true;
 }
 
-void Debug::SetPid(pid_t pid){
+inline void Debug::SetPid(pid_t pid){
 
     this->m_arguments.m_dbg.pid = pid;
 }
 
-void Debug::SetPathname(char **pathname){
+inline void Debug::SetPathname(char **pathname){
 
     this->m_arguments.m_dbg.pathname = pathname;
 }
 
-void Debug::SetCount(int count){
+inline void Debug::SetCount(int count){
 
     this->m_arguments.m_dbg.count = count;
 }
 
-void Debug::SetProgramState(bool state){
+inline void Debug::SetProgramState(bool state){
 
     b_is_running = state;
 }
 
-void Debug::SetSyscallState(bool state){
+inline void Debug::SetSyscallState(bool state){
 
     b_is_sys_stopped = state;
 }
 
-bool Debug::GetDwarfState(void) const {
+inline bool Debug::GetDwarfState(void) const {
 
     return b_dwarf_state;
 }
 
-bool Debug::GetSymState(void) const {
+inline bool Debug::GetSymState(void) const {
 
     return b_sym_state;
 }
 
-bool Debug::GetSystrace(void) const{
+inline bool Debug::GetSystrace(void) const{
 
     return m_arguments.is_systrace;
 }
 
-bool Debug::GetInforeg(void) const{
+inline bool Debug::GetInforeg(void) const{
 
     return m_arguments.b_is_inforeg;
 }
 
-pid_t Debug::GetPid(void) const{
+inline pid_t Debug::GetPid(void) const{
 
     return m_arguments.m_dbg.pid;
 }
 
-char **Debug::GetPathname(void) const{
+inline char **Debug::GetPathname(void) const{
 
     return m_arguments.m_dbg.pathname;
 }
 
-int Debug::GetCount(void) const{
+inline int Debug::GetCount(void) const{
 
     return m_arguments.m_dbg.count;
 }
 
-bool Debug::GetProgramState(void) const{
+inline bool Debug::GetProgramState(void) const{
 
     return b_is_running;
 }
 
-bool Debug::GetSyscallState(void) const{
+inline bool Debug::GetSyscallState(void) const{
 
     return b_is_sys_stopped;
 }
