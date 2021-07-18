@@ -31,9 +31,13 @@ class Lineinfo{
 class DebugLineInfo{
 
     private:
+        uint64_t m_base_addr;
         std::vector<Lineinfo*> D_lines;
 
     public:
+        DebugLineInfo(uint64_t base_addr)
+            :m_base_addr(base_addr) {}
+
         ~DebugLineInfo();
 
         inline void AppendElement(int line_number, uint64_t address, 

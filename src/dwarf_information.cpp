@@ -30,12 +30,15 @@ DebugLineInfo::~DebugLineInfo(){
     D_lines.clear();
 }
 
-uint64_t DebugLineInfo::GetAddressByLine(int compilation_unit, int line_number){
+uint64_t DebugLineInfo::GetAddressByLine(int compilation_unit, 
+        int line_number){
 
-    if(compilation_unit > GetNoOfCompilationUnits() || line_number > GetMaxLineNumber(compilation_unit) || line_number < GetMinLineNumber(compilation_unit)){
+    if(compilation_unit > GetNoOfCompilationUnits() || 
+            line_number > GetMaxLineNumber(compilation_unit) ||
+            line_number < GetMinLineNumber(compilation_unit)){
 
         log.Error("Unit number is out of range\n");
-        return -1;
+        goto failed;
     }
 
     for(int i = 0; i < D_lines.size(); i++){
@@ -46,48 +49,8 @@ uint64_t DebugLineInfo::GetAddressByLine(int compilation_unit, int line_number){
                 return D_lines[i]->m_address;
         }
     }
+failed:
     return -1;
-}
-
-uint64_t DebugLineInfo::GatBaseAddress(pid_t pid){
-
-    const char *filename = (char *)malloc(1024);
-    if(!filename){
-
-        log.PError("Memory allocation error");
-        return -1;
-    }
-
-    memset((char *)filename, 0, 1024);
-
-    if(sprintf((char *)filename, "/proc/%d/maps", pid) < 0){
-
-        log.PError("IO error");
-        return -1;
-    }
-
-    char *address = (char *)calloc(sizeof(char), 17);
-    FILE *fh = fopen(filename, "r");
-
-    free((void *)filename);
-    int i = 0;
-    for (i = 0; i < 16; i++){
-
-        int c = fgetc(fh);
-        if(c == '\0'){
-            fclose(fh);
-            return -1;
-        }
-        address[i] = c;
-    }
-    address[i] = '\0';
-    fclose(fh);
-    uint64_t addr = 0x0;
-    if(address)
-        sscanf(address, "%lx", &addr);
-
-    free(address);
-    return addr;
 }
 
 int DebugLineInfo::GetMaxLineNumber(int compilation_unit){
@@ -138,15 +101,17 @@ int DebugLineInfo::ListSrcLines(int compilation_unit){
     if(compilation_unit > GetNoOfCompilationUnits()){
 
         log.Error("Unit number out of range\n");
-        return 0;
+        goto err;
     }
     for(auto x = D_lines.begin(); x != D_lines.end(); x++){
 
         if((*x)->m_unit_number == compilation_unit){
 
-            log.Print("%d\t%x\n", (*x)->m_line_number, (*x)->m_address);
+            log.Print("%d\t%x\n", (*x)->m_line_number, 
+                    (*x)->m_address);
         }
     }
 
+err:
     return 0;
 }

@@ -99,6 +99,10 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address) {
     log.Debug("restore address %x\n", address);
     if(ptrace(PTRACE_POKETEXT, m_debug.GetPid(), address, b->m_origdata) < 0){
 
+        /* 
+         * do not use gotos to handle errors for any of ptrace fails
+         * errors may vary from each
+         */
         log.PError("Ptrace error");
         return -1;
     }
@@ -375,7 +379,9 @@ int Main::ContinueExecution(BreakpointList& li){
     return -1;
 }
 
-/* i just copied this piece of code from one of libelfin examples */
+/* 
+ * i just copied this piece of code from one of libelfin examples 
+ */
 void Main::ParseLines(const dwarf::line_table &lt, int unit_number) const{
 
     for (auto &line : lt){
@@ -421,20 +427,19 @@ int Main::MainLoop(void){
 
     while (1) {
 
-        /*  tokenizing commands */
         std::string command;
 
-        log.Prompt("[zkz] ");     //prompt
-        if(!std::getline(std::cin, command)){   // if returns nothing, IO errorr
+        log.Prompt("[zkz] ");
+        if(!std::getline(std::cin, command)){
 
             log.Error("IO error\n");
             return -1;
         }
-        if(command.empty()) continue;   // if user didnt input anything, just continue
+        if(command.empty()) continue;
 
         std::stringstream strstrm(command);
         std::vector<std::string> commands{};
-        std::string word;   // use this when getting additional user input
+        std::string word;
 
         while(std::getline(strstrm, word, ' ')){
 
@@ -442,7 +447,9 @@ int Main::MainLoop(void){
             commands.push_back(word);
         }
 
-        /* reset is used to restart a process, while it is still running or exited */
+        /* 
+         * reset is used to restart a process, while it is still running or exited 
+         */
         if(command.compare("run") == 0 || command.compare("r") == 0 || 
                 command.compare("continue") == 0 || command.compare("c") == 0){
 
@@ -754,7 +761,9 @@ int Main::MainLoop(void){
                         continue;
                     }
 
-                    /* converting user input string address to a uint64_t address */
+                    /* 
+                     * converting user input string address to a uint64_t address 
+                     */
                     uint64_t address;
 
                     try{
@@ -1064,7 +1073,7 @@ int Main::MainLoop(void){
 
         else if(commands[0].compare("step") == 0 || commands[0].compare("s") == 0){
 
-            if(commands.size() > 1){       // if commands vector's length is greater than 1, it means that user provided a number of steps
+            if(commands.size() > 1){
 
                 int number_of_steps;
                 try{
@@ -1207,7 +1216,7 @@ failed:
 
 int Main::StartProcess(void) {
 
-    if(m_debug.GetPathname()){    // just an extra checking
+    if(m_debug.GetPathname()){
 
         pid_t pid = fork();
         if(pid == -1){
@@ -1271,12 +1280,12 @@ int Main::AttachProcess(void) {
 
 void Main::ParseArguments(int argc, char *argv[]){
 
+    char **pathname = nullptr;
     for(int i = 1; i < argc; i++){
 
         if (strcmp(argv[i], "-f") == 0){
 
             int j, count = 0;
-            char **pathname = nullptr;
             i++;
             for(j = i; j < argc; j++){
 
@@ -1286,7 +1295,7 @@ void Main::ParseArguments(int argc, char *argv[]){
                 if(!pathname){
 
                     log.PError("Memory allocation error");
-                    exit(EXIT_FAILURE);
+                    goto failed;
                 }
  
                 pathname[count] = argv[j];
@@ -1307,8 +1316,7 @@ void Main::ParseArguments(int argc, char *argv[]){
                 /* 
                  * user have to specify a process id 
                  */
-                PrintUsage();
-                exit(EXIT_FAILURE);
+                goto failed;
             }
             else m_debug.SetPid(atoi(argv[i]));
         }
@@ -1317,8 +1325,7 @@ void Main::ParseArguments(int argc, char *argv[]){
             i++;
             if(i == argc || !argv[i]){
 
-                PrintUsage();
-                exit(EXIT_FAILURE);
+                goto failed;
             }
             if(atoi(argv[i]) > 0){
 
@@ -1330,8 +1337,7 @@ void Main::ParseArguments(int argc, char *argv[]){
             i++;
             if(i == argc || !argv[i]) {
 
-                PrintUsage();
-                exit(EXIT_FAILURE);
+                goto failed;
             }
             if(atoi(argv[i]) > 0){
 
@@ -1340,10 +1346,16 @@ void Main::ParseArguments(int argc, char *argv[]){
         }
         else{
 
-            PrintUsage();
-            exit(EXIT_FAILURE);
+            goto failed;
         }
     }
+
+failed:
+    if(pathname)
+        free(pathname);
+
+    PrintUsage();
+    exit(EXIT_FAILURE);
 }
 
 int Main::Debugger(void){
@@ -1364,14 +1376,16 @@ int Main::Debugger(void){
         else if(ret == -1) return -1;
     }
 
-    m_elf_ptr = new Elf(m_debug.GetPid(), m_debug.GetPathname()[0], m_base_addr);
-    m_line_info_ptr = new DebugLineInfo();
     m_base_addr = GetBaseAddress(m_debug.GetPid());
+    m_elf_ptr = new Elf(m_debug.GetPid(), m_debug.GetPathname()[0], m_base_addr);
+    m_line_info_ptr = new DebugLineInfo(m_base_addr);
 
     std::thread worker_debuglines(&Main::InitDebugLines, this);
     std::thread worker_elfsyms(&Elf::OpenFile, m_elf_ptr, 0);
 
-    /* printing where rip is at */
+    /*
+     * printing where rip is at 
+     */
     if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
 
         log.PError("Ptrace error");

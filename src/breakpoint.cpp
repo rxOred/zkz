@@ -113,7 +113,7 @@ Breakpoint *BreakpointList::GetElementByBreakpointNumber(int breakpoint_number) 
     if(breakpoint_number > GetNoOfBreakpoints()){
 
         log.Error("Invalid breakpoint number\n");
-        return nullptr;
+        goto failed;
     }
     for (auto x = B_List.begin(); x != B_List.end(); x++){
 
@@ -122,6 +122,7 @@ Breakpoint *BreakpointList::GetElementByBreakpointNumber(int breakpoint_number) 
             return (*x);
         }
     }
+failed:
     return nullptr;
 }
 
