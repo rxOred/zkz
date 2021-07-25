@@ -69,9 +69,6 @@ int Main::RemoveAllBreakpoints(BreakpointList& li) const{
 
     for (int i = 0; i < li.GetNoOfBreakpoints(); i++){
 
-        /* 
-         * chech errors properly 
-         */
         if(li.RemoveElement(m_debug, i + 1) < 0)
             return -1;
     }
