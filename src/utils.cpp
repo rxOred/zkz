@@ -22,8 +22,10 @@ void PrintHelp(void){
 
 void PrintUsage(void){
 
-    //free memory and exit
-    log.Print("something\n");
+    log.Print("[zkz] Usage\nQuick help to start zkz debugger\n\t \
+            -f - Start executing given file as the debugee\n\t  \
+            -p - Attach to given process ID\n\t                 \
+            -s - Enable system call tracing\n\t                 \
+            -i - Print register information on each step\n\t    \
+            ");
 }
-
-
