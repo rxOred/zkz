@@ -36,13 +36,13 @@
 #define STOPPED_STATUS 2
 #define SIGNALED_STATUS 3
 
-void Main::KillProcess(pid_t pid) const{
-
+void Main::KillProcess(pid_t pid) const
+{
     kill(pid, SIGKILL);
 }
 
-int Main::WaitForProcess(void) {
-
+int Main::WaitForProcess(void) 
+{
     int wstatus = 0;
     waitpid(m_debug.GetPid(), &wstatus, 0);
 
@@ -58,15 +58,18 @@ int Main::WaitForProcess(void) {
     }
     else if(WIFSIGNALED(wstatus)){
 
-        log.Info("Process recieved a signal %d\n", wstatus /* replace this with signal */);
+        log.Info("Process recieved a signal %d\n", wstatus);
+        /*
+         * replace wstatus with signal
+         */
         return SIGNALED_STATUS;
     }
 
     return -1;
 }
 
-int Main::RemoveAllBreakpoints(BreakpointList& li) const{
-
+int Main::RemoveAllBreakpoints(BreakpointList& li) const
+{
     for (int i = 0; i < li.GetNoOfBreakpoints(); i++){
 
         if(li.RemoveElement(m_debug, i + 1) < 0)
@@ -75,24 +78,25 @@ int Main::RemoveAllBreakpoints(BreakpointList& li) const{
     return 0;
 }
 
-int Main::DisableBreakpoint(BreakpointList& li, int breakpoint_number) const{
-
-    Breakpoint *b = li.GetElementByBreakpointNumber(breakpoint_number);
+int Main::DisableBreakpoint(BreakpointList& li, int b_number) const
+{
+    Breakpoint *b = li.GetElementByBreakpointNumber(b_number);
     if(b == nullptr){
 
-        log.Error("Breakpoint %d not found\n", breakpoint_number); 
+        log.Error("Breakpoint %d not found\n", b_number); 
     }
 
     b->DisableBreakpoint();
-    log.Print("Breakpoint %d disabled\n", breakpoint_number);
+    log.Print("Breakpoint %d disabled\n", b_number);
     return 0;
 }
 
 /* 
- * to restore the instruction to its previous state before placing the breakpoint 
+ * to restore the instruction to its previous state before 
+ * placing the breakpoint 
  */
-int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address) {
-
+int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address)
+{
     log.Debug("restore address %x\n", address);
     if(ptrace(PTRACE_POKETEXT, m_debug.GetPid(), address, b->m_origdata) < 0){
 
@@ -135,8 +139,8 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address) {
     return 0;
 }
 
-int Main::PlaceBreakpoint(BreakpointList& li, uint64_t address) const{
-
+int Main::PlaceBreakpoint(BreakpointList& li, uint64_t address) const
+{
     uint64_t origdata = ptrace(PTRACE_PEEKTEXT, m_debug.GetPid(), address, nullptr);
 
     if(origdata < 0){
@@ -156,8 +160,8 @@ int Main::PlaceBreakpoint(BreakpointList& li, uint64_t address) const{
     return 0;
 }
 
-int Main::StepAuto(BreakpointList& li) {
-
+int Main::StepAuto(BreakpointList& li) 
+{
     int ret;
     do{
 
@@ -215,8 +219,8 @@ int Main::StepAuto(BreakpointList& li) {
     return 0;
 }
 
-int Main::StepX(BreakpointList& li, int number_of_steps) {
-
+int Main::StepX(BreakpointList& li, int number_of_steps) 
+{
     for (int i = 0; i < number_of_steps; i++){
 
         if(ptrace(PTRACE_SINGLESTEP, m_debug.GetPid(), nullptr, nullptr) < 0){
@@ -250,16 +254,18 @@ int Main::StepX(BreakpointList& li, int number_of_steps) {
 
                 if(b->GetState()){
 
-                    log.Info("Stopped execution at %x : breakpoint number %d\n", 
-                            m_regs.rip -1, b->m_breakpoint_number);
+                    log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs
+                            .rip -1, b->m_breakpoint_number);
 
-                    if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
+                    if(RestoreBreakpoint(b, m_regs.rip - 1) < -1)
+                        return -1;
                     return 0;
                 }
                 else{
 
 
-                    if(RestoreBreakpoint(b, m_regs.rip - i) < -1) return -1;
+                    if(RestoreBreakpoint(b, m_regs.rip - i) < -1)
+                        return -1;
                     continue;
                 }
             }
@@ -270,10 +276,11 @@ int Main::StepX(BreakpointList& li, int number_of_steps) {
     return 0;
 }
 
-int Main::ContinueExecution(BreakpointList& li){
-
-     /* if is_sys_stopped == true, we are settting it to false 
-      * because we continue execution.
+int Main::ContinueExecution(BreakpointList& li)
+{
+     /* 
+      * if is_sys_stopped == true, we are settting it to false because we continue 
+      * execution.
       */
     if(m_debug.GetSyscallState()){
 
@@ -315,8 +322,8 @@ int Main::ContinueExecution(BreakpointList& li){
         log.Debug("Prcoess stopped at address %x\n", m_regs.rip - 1);
 
         /* 
-         * if this return null, we are not in a breakpoint, so reason for 
-         * SIGSTOP/SIGTRAP must be a system call if systrace is enabled
+         * if this return null, we are not in a breakpoint, so reason for SIGSTOP/\
+         * SIGTRAP must be a system call if systrace is enabled
          */
         Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);
         if(b == nullptr){
@@ -348,8 +355,8 @@ int Main::ContinueExecution(BreakpointList& li){
              */
             if(b->GetState()){ 
 
-                log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.rip -1, 
-                        b->m_breakpoint_number);
+                log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.
+                        rip -1, b->m_breakpoint_number);
 
                 if(m_debug.GetInforeg()){
 
@@ -362,7 +369,8 @@ int Main::ContinueExecution(BreakpointList& li){
             else{
 
                 /*
-                 * if breakpoint is disabled, go restore the instruction and continue execution
+                 * if breakpoint is disabled, go restore the instruction and 
+                 * continue execution
                  */
                 log.Debug("Disabled breakpoint\n");
                 if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
@@ -379,19 +387,19 @@ int Main::ContinueExecution(BreakpointList& li){
 /* 
  * i just copied this piece of code from one of libelfin examples 
  */
-void Main::ParseLines(const dwarf::line_table &lt, int unit_number) const{
-
+void Main::ParseLines(const dwarf::line_table &lt, int unit_number) const
+{
     for (auto &line : lt){
 
-        log.Debug("line number :%d\t address :%x\n", line.line, 
-                m_base_addr + line.address);
-        m_line_info_ptr->AppendElement(line.line, m_base_addr + 
-                line.address, unit_number);
+        log.Debug("line number :%d\t address :%x\n", line.line, m_base_addr + 
+                line.address);
+        m_line_info_ptr->AppendElement(line.line, m_base_addr + line.address, 
+                unit_number);
     }
 }
 
-void Main::InitDebugLines(void) {
-
+void Main::InitDebugLines(void) 
+{
     elf::elf elf_f;
     dwarf::dwarf dwarf_f;
 
@@ -415,8 +423,8 @@ void Main::InitDebugLines(void) {
     }
 }
 
-int Main::MainLoop(void){
-
+int Main::MainLoop(void)
+{
     log.SetState(PRINT | PROMPT | WARN | INFO | DEBUG | PERROR | ERROR);
 
     BreakpointList li;
@@ -447,8 +455,8 @@ int Main::MainLoop(void){
         /* 
          * reset is used to restart a process, while it is still running or exited 
          */
-        if(command.compare("run") == 0 || command.compare("r") == 0 || 
-                command.compare("continue") == 0 || command.compare("c") == 0){
+        if(command.compare("run") == 0 || command.compare("r") == 0 || command.compare(
+                    "continue") == 0 || command.compare("c") == 0){
 
             if(!m_debug.GetProgramState()){
 
@@ -474,8 +482,8 @@ int Main::MainLoop(void){
                 else if (m_debug.GetPathname() != nullptr){
 
                     /* 
-                     * if pathname is there, we can continue and let user 
-                     * to enter reset command
+                     * if pathname is there, we can continue and let user to enter 
+                     * reset command
                      */
                     continue;
                 }
@@ -606,35 +614,40 @@ int Main::MainLoop(void){
 
                         try{
 
-                            default_compilation_unit = std::stoi(word, nullptr, 10);
+                            default_compilation_unit = std::stoi(word, nullptr, 
+                                    10);
                         }catch (std::out_of_range const& err_1){
 
                             log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            log.Error("Invalid compilation unit number %d\n", err_2.what());
+                            log.Error("Invalid compilation unit number %d\n", 
+                                    err_2.what());
                             continue;
                         }
                     }
                     else{
                         try{
 
-                            default_compilation_unit = std::stoi(commands[1], nullptr, 10);
-                            if(default_compilation_unit < 0 || 
-                                    default_compilation_unit > m_line_info_ptr->GetNoOfCompilationUnits()){
+                            default_compilation_unit = std::stoi(commands[1], 
+                                    nullptr, 10);
+                            if(default_compilation_unit < 0 || default_compilation_unit
+                                    > m_line_info_ptr->GetNoOfCompilationUnits()){
 
                                 log.Error("Compilation unit number is not in range\n");
                                 continue;
                             }
-                            log.Print("Compilation unit : %d selected\n", default_compilation_unit);
+                            log.Print("Compilation unit : %d selected\n", 
+                                    default_compilation_unit);
                         }catch (std::out_of_range const& err_1){
 
                             log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            log.Error("Invalid compilation unit number %s\n", err_2.what());
+                            log.Error("Invalid compilation unit number %s\n",
+                                    err_2.what());
                             continue;
                         }
                     }
@@ -674,11 +687,13 @@ int Main::MainLoop(void){
 
                         try{
 
-                            address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, 
+                            address = m_line_info_ptr->GetAddressByLine(
+                                    default_compilation_unit, 
                                     std::stoi(word, nullptr, 10));
                             if(address < 0){
 
-                                log.Error("Address for corresponding line is not found\n");
+                                log.Error("Address for corresponding line is not found"
+                                        "\n");
                                 continue;
                             }
  
@@ -699,7 +714,8 @@ int Main::MainLoop(void){
                         for (int i = 1; i < commands.size(); i++){
                             try{
 
-                                address = m_line_info_ptr->GetAddressByLine(default_compilation_unit, 
+                                address = m_line_info_ptr->GetAddressByLine(
+                                        default_compilation_unit, 
                                         std::stoi(commands[i], nullptr, 10));
                             }catch (std::out_of_range& err_1) {
 
@@ -716,7 +732,8 @@ int Main::MainLoop(void){
                              */
                             if(address < 0){
 
-                                log.Error("Address for corresponding line is not found\n");
+                                log.Error("Address for corresponding line is not found \
+                                        \n");
                                 continue;
                             }
                             if(PlaceBreakpoint(li, address) < 0) continue;
@@ -738,8 +755,8 @@ int Main::MainLoop(void){
         else if(commands[0].compare("break")  == 0 || commands[0].compare("b") == 0){
 
             /* 
-             * check length of commands vector is less than 2, if yes, 
-             * user havent mentioned ann address to place a breakpoint 
+             * check length of commands vector is less than 2, if yes, user havent 
+             * mentioned ann address to place a breakpoint 
              */
             if(m_debug.GetProgramState()){
 
@@ -779,14 +796,14 @@ int Main::MainLoop(void){
                 }
 
                 /* 
-                 * if user has specified more addresses than 1, we are going 
-                 * to place breakpoints in all of those addresses 
+                 * if user has specified more addresses than 1, we are going to place
+                 * breakpoints in all of those addresses 
                  */
                 else{
 
                     /*
-                     * we are staring from second element [1st index] of the 
-                     * vector because 0th index is the command 
+                     * we are staring from second element [1st index] of the vector
+                     * because 0th index is the command 
                      */
                     for (int i = 1; i < static_cast<int>(commands.size()); i++){
 
@@ -813,8 +830,9 @@ int Main::MainLoop(void){
                 continue;
             }
         }
-        else if(command.compare("info registers") == 0 || command.compare("i r") == 0 || 
-                command.compare("i registers") == 0 || command.compare("info r") == 0){
+        else if(command.compare("info registers") == 0 || command.compare("i r") == 0
+                | command.compare("i registers") == 0 || command.compare("info r") == 0)
+        {
 
             if(m_debug.GetProgramState()){
                 InfoRegistersAll(m_debug, m_regs);
@@ -837,7 +855,7 @@ int Main::MainLoop(void){
                 continue;
             }
         }
-        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 || 
+        else if(commands[0].compare("delete") == 0 || commands[0].compare("del") == 0 | 
                 commands[0].compare("d") == 0){
 
             if(m_debug.GetProgramState()){
@@ -877,7 +895,8 @@ int Main::MainLoop(void){
 
                         try {
 
-                            if(li.RemoveElement(m_debug, std::stoi(commands[i], nullptr, 10)) < 0)
+                            if(li.RemoveElement(m_debug, std::stoi(commands[i], nullptr
+                                            , 10)) < 0)
                                 return -1;
                         }catch (std::out_of_range& err_1) {
 
@@ -885,7 +904,8 @@ int Main::MainLoop(void){
                             continue;
                         }catch (std::invalid_argument& err_2){
 
-                            log.Error("Invalid address or line number : %s\n", err_2.what());
+                            log.Error("Invalid address or line number : %s\n", err_2.
+                                    what());
                             continue;
                         }
                     }
@@ -1025,7 +1045,8 @@ int Main::MainLoop(void){
 
                     try{
 
-                        if(DisableBreakpoint(li, std::stoi(commands[i], nullptr, 10)) < 0)
+                        if(DisableBreakpoint(li, std::stoi(commands[i], nullptr, 10)) 
+                                < 0)
                             continue;
                     }catch (std::out_of_range& err_1) {
 
@@ -1133,7 +1154,7 @@ int Main::MainLoop(void){
 #ifdef INJECT
         else if(command.compare("inject") == 0){
 
-            log.Prompt(">");
+            log.Prompt("shellcode >");
             if(!std::getline(std::cin, word)){
 
                 log.Error("IO error\n");
@@ -1145,11 +1166,10 @@ int Main::MainLoop(void){
                 continue;
             }
 
-            // inject code            
+            
         }
 
 #endif
-
         else if(command.compare("exit") == 0){
 
             log.Prompt("Do you want to kill the process? [yes/no] ");
@@ -1179,8 +1199,8 @@ int Main::MainLoop(void){
     return 0;
 }
 
-uint64_t Main::GetBaseAddress(pid_t pid) const{
-
+uint64_t Main::GetBaseAddress(pid_t pid) const
+{
     uint64_t base_addr = 0;
     char proc_path[64];
     char addr_buf[16];
@@ -1211,8 +1231,8 @@ failed:
     return base_addr;
 }
 
-int Main::StartProcess(void) {
-
+int Main::StartProcess(void) 
+{
     if(m_debug.GetPathname()){
 
         pid_t pid = fork();
@@ -1247,8 +1267,8 @@ int Main::StartProcess(void) {
 
                 m_debug.SetProgramState(true);
                 /* 
-                 * no one should set this to true except start_process an 
-                 * attach_process functions, which are related to start the process
+                 * no one should set this to true except start_process an attach_
+                 * process functions, which are related to start the process
                  */
                 m_debug.SetPid(pid);
                 return 0;
@@ -1258,8 +1278,8 @@ int Main::StartProcess(void) {
     return -1;
 }
 
-int Main::AttachProcess(void) {
-
+int Main::AttachProcess(void) 
+{
     if(m_debug.GetPid() != 0){
         if(ptrace(PTRACE_ATTACH, m_debug.GetPid(), nullptr, nullptr) < 0){
 
@@ -1275,8 +1295,8 @@ int Main::AttachProcess(void) {
     return -1;
 }
 
-void Main::ParseArguments(int argc, char *argv[]){
-
+void Main::ParseArguments(int argc, char *argv[])
+{
     char **pathname = nullptr;
     for(int i = 1; i < argc; i++){
 
@@ -1355,8 +1375,8 @@ failed:
     exit(EXIT_FAILURE);
 }
 
-int Main::Debugger(void){
-
+int Main::Debugger(void)
+{
     if((m_debug.GetPathname()[0] != nullptr) && (m_debug.GetPid() != 0)){
         PrintUsage();
     }
@@ -1404,14 +1424,14 @@ int Main::Debugger(void){
     return 0;
 }
 
-Main::~Main(void){
-
+Main::~Main(void)
+{
     delete m_elf_ptr;
     delete m_line_info_ptr;
 }
 
-int main(int argc, char *argv[]){
-
+int main(int argc, char *argv[])
+{
     Main m;
 
     m.ParseArguments(argc, argv);
