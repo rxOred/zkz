@@ -1,5 +1,5 @@
-#ifndef BIN_H
-#define BIN_H
+#ifndef ELF_H
+#define ELF_H
 
 #include <elf.h>
 #include <bits/stdint-uintn.h>
@@ -15,8 +15,7 @@ typedef struct {
     char *m_symbol;
 } Syminfo;
 
-class Elf{
-
+class Elf {
     private:
 
         /* 
@@ -53,30 +52,16 @@ class Elf{
 
         bool b_load_failed;
 
-        /*
-         * vector of pathnames already searched
-         */
-        std::vector<char *> P_list;
-
-        /*
-         * vector of Syminfo *
-         */
-        std::vector<Syminfo *> S_list;   /* list of Syminfo */
-
         Elf(pid_t pid, const char *pathname, uint64_t base_addr)
-            : b_load_failed(false), m_size(0), m_base_addr(base_addr), m_ehdr(nullptr), m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr){
-            P_list.push_back(strdup(pathname));
-        }
+            : b_load_failed(false), m_size(0), m_base_addr(base_addr), m_ehdr(nullptr), 
+            m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr)
+        {}
 
         ~Elf();
 
         bool SearchForPath(char *pathname);
-        int OpenFile(int index);
-        int LoadFile(int fd, int size);
-        int LoadSymbols();
-        void RemoveMap(void);
-        int ParseDynamic(void);
-        void ListSyms(int prange);
+        int OpenElf(const char *filename);
+        int LoadFile(int fd);
 };
 
-#endif /* BIN_H */
+#endif /* ELF_H */

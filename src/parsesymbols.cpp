@@ -1,23 +1,6 @@
-#include <bits/stdint-uintn.h>
-#include <elf.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <iostream>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <thread>
-#include <unistd.h>
+#include "parsesymbols.h"
 
-#include "debug.h"
-#include "bin.h"
-#include "log.h"
-
-#include <sys/mman.h>
-
-#define FAILED 1
-
-Elf::~Elf(){
+Symbol::~Symbol(){
 
     for(int i = 0; i < S_list.size(); i++){
 
@@ -42,19 +25,7 @@ Elf::~Elf(){
     }
 }
 
-inline void Elf::RemoveMap(void){
-
-    if(m_mapping != nullptr){
-
-        if(munmap(m_mapping, m_size) < 0){
-
-            log.PError("Memory unmap failed");
-        }
-    }
-    m_mapping = nullptr;
-}
-
-int Elf::OpenFile(int index){
+int Symbol::OpenFile(int index){
 
     int fd = open((char *)P_list[index], O_RDONLY);
     if(fd < 0){
@@ -87,44 +58,7 @@ failed:
     return -FAILED;
 }
 
-int Elf::LoadFile(int fd, int size){
-
-    m_size = size;
-
-    m_mapping = (uint8_t *)mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if(m_mapping == (uint8_t *) MAP_FAILED){
-
-        log.PError("Memory map failed");
-        goto failed;
-    }
-
-    m_ehdr = (Elf64_Ehdr *)m_mapping;
-    if(m_ehdr->e_ident[0] != 0x7f || m_ehdr->e_ident[1] != 'E' || m_ehdr->e_ident[2] != 'L' || m_ehdr->e_ident[3] != 'F'){
-
-        log.Error("Not an elf binary\n");
-        goto not_elf;
-    }
-
-    if(m_ehdr->e_type != ET_DYN){
-
-        log.Error("Not a dynamically linked binary\n");
-        goto not_elf;
-    }
-
-    if(m_ehdr->e_phoff != 0){ m_phdr = (Elf64_Phdr *) &m_mapping[m_ehdr->e_phoff]; }
-    if(m_ehdr->e_shoff != 0){ m_shdr = (Elf64_Shdr *) &m_mapping[m_ehdr->e_shoff]; }
-
-    return 0;
-
-not_elf:
-    RemoveMap();
-
-failed:
-    b_load_failed = true;
-    return -FAILED;
-}
-
-int Elf::LoadSymbols(){
+int Symbol::LoadSymbols(){
 
     char *str = nullptr;
     Elf64_Sym *sym = nullptr;
@@ -184,7 +118,7 @@ failed:
     return -FAILED;
 }
 
-bool Elf::SearchForPath(char *pathname){
+bool Symbol::SearchForPath(char *pathname){
 
     for (auto x = P_list.begin(); x != P_list.end(); x++){
 
@@ -195,7 +129,7 @@ bool Elf::SearchForPath(char *pathname){
      return false;
 }
 
-int Elf::ParseDynamic(void){
+int Symbol::ParseDynamic(void){
 
     Elf64_Dyn *dyn = nullptr; 
     Elf64_Sym *dynsym = nullptr;
@@ -347,7 +281,7 @@ failed:
     return -1;
 }
 
-void Elf::ListSyms(int prange){
+void Symbol::ListSyms(int prange){
 
 
     log.Print("address\t\tsymbol");
