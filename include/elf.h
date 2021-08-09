@@ -1,5 +1,5 @@
-#ifndef BIN_H
-#define BIN_H
+#ifndef ELF_H
+#define ELF_H
 
 #include <elf.h>
 #include <bits/stdint-uintn.h>
@@ -60,8 +60,8 @@ class Elf {
         ~Elf();
 
         bool SearchForPath(char *pathname);
-        int OpenFile(int index);
-        int LoadFile(int fd, int size);
+        int OpenElf(const char *filename);
+        int LoadFile(int fd);
 };
 
-#endif /* BIN_H */
+#endif /* ELF_H */

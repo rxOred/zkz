@@ -29,44 +29,36 @@ inline void Elf::RemoveMap(void){
     m_mapping = nullptr;
 }
 
-int Elf::OpenFile(int index){
-
-    int fd = open((char *)P_list[index], O_RDONLY);
+int Elf::OpenElf(const char *filename)
+{
+    int fd = open(filename, O_RDONLY);
     if(fd < 0){
-
         log.PError("File open error");
         goto failed;
     }
 
     struct stat st;
     if(fstat(fd, &st) < 0){
-
-        log.PError("File error");
+        log.PError("File open error");
         goto file_failed;
     }
 
-    if(LoadFile(fd, st.st_size) < 0)
+    m_size = st.st_size;
+    if(LoadFile(fd) < 0)
         goto file_failed;
+
     close(fd);
-
-    if(LoadSymbols() < 0)
-        goto failed;
-
     return 0;
 
 file_failed:
     close(fd);
-
 failed:
-    b_load_failed = true;
-    return -FAILED;
+    return -1;
 }
 
-int Elf::LoadFile(int fd, int size){
-
-    m_size = size;
-
-    m_mapping = (uint8_t *)mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
+int Elf::LoadFile(int fd)
+{
+    m_mapping = (uint8_t *)mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if(m_mapping == (uint8_t *) MAP_FAILED){
 
         log.PError("Memory map failed");
