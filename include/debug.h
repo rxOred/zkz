@@ -23,12 +23,14 @@ class Debug{
             }m_dbg;
 
             /*
-             * should we stop and wait for user in every syscall invocation of debugee?
+             * should we stop and wait for user in every syscall invocation of 
+             * debugee?
              */
             bool is_systrace;
 
             /*
-             * shoudl we print register infomation on every stop of debugging process?
+             * shoudl we print register infomation on every stop of debugging 
+             * process?
              */
             bool b_is_inforeg;
         } m_arguments;
@@ -58,93 +60,93 @@ class Debug{
 
         ~Debug();
 
-        inline void SetDwarf(void){
-
+        inline void SetDwarf(void)
+        {
             b_dwarf_state = false;
         }
 
-        inline void SetSym(void){
-
+        inline void SetSym(void)
+        {
             b_sym_state = false;
         }
 
-        inline void SetSystrace(void){
-
+        inline void SetSystrace(void)
+        {
             m_arguments.is_systrace = true;
         }
 
-        inline void SetInforeg(void){
-
+        inline void SetInforeg(void)
+        {
             m_arguments.b_is_inforeg = true;
         }
 
-        inline void SetPid(pid_t pid){
-
+        inline void SetPid(pid_t pid)
+        {
             this->m_arguments.m_dbg.pid = pid;
         }
 
-        inline void SetPathname(char **pathname){
-
+        inline void SetPathname(char **pathname)
+        {
             this->m_arguments.m_dbg.pathname = pathname;
         }
 
-        inline void SetCount(int count){
-
+        inline void SetCount(int count)
+        {
             this->m_arguments.m_dbg.count = count;
         }
 
-        inline void SetProgramState(bool state){
-
+        inline void SetProgramState(bool state)
+        {
             b_is_running = state;
         }
 
-        inline void SetSyscallState(bool state){
-
+        inline void SetSyscallState(bool state)
+        {
             b_is_sys_stopped = state;
         }
 
-        inline bool GetDwarfState(void) const {
-
+        inline bool GetDwarfState(void) const 
+        {
             return b_dwarf_state;
         }
 
-        inline bool GetSymState(void) const {
-
+        inline bool GetSymState(void) const 
+        {
             return b_sym_state;
         }
 
-        inline bool GetSystrace(void) const{
-
+        inline bool GetSystrace(void) const
+        {
             return m_arguments.is_systrace;
         }
 
-        inline bool GetInforeg(void) const{
-
+        inline bool GetInforeg(void) const
+        {
             return m_arguments.b_is_inforeg;
         }
 
-        inline pid_t GetPid(void) const{
-
+        inline pid_t GetPid(void) const
+        {
             return m_arguments.m_dbg.pid;
         }
 
-        inline char **GetPathname(void) const{
-
+        inline char **GetPathname(void) const
+        {
             return m_arguments.m_dbg.pathname;
         }
 
-        inline int GetCount(void) const{
-
+        inline int GetCount(void) const
+        {
             return m_arguments.m_dbg.count;
         }
 
-        inline bool GetProgramState(void) const{
-
+        inline bool GetProgramState(void) const
+        {
             return b_is_running;
         }
 
-        inline bool GetSyscallState(void) const{
-
+        inline bool GetSyscallState(void) const
+        {
             return b_is_sys_stopped;
         }
 };

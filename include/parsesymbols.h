@@ -1,10 +1,11 @@
-#ifdef PARSESYMBOLS_H
+#ifndef PARSESYMBOLS_H
 #define PARSESYMBOLS_H
 
-#include "elf.h"
+#include <cstdint>
+#include "elfp.h"
 
-class Symbol: public Elf {
-    public:
+class Symbol : public Elf {
+    private:
         /*
          * vector of pathnames already searched
          */
@@ -13,15 +14,22 @@ class Symbol: public Elf {
         /*
          * vector of Syminfo *
          */
-        std::vector<Syminfo *> S_list;   /* list of Syminfo */
+        std::vector<Syminfo *> S_list;
+
+    public:
+        bool b_load_failed;
+        Symbol(const char *pathname, uint64_t base_addr):Elf(pathname, base_addr)
+        {
+            //pushback pathname
+        }
 
         ~Symbol();
 
         int OpenFile(int index);
-        int LoadSymbols();
-        void RemoveMap(void);
+        bool SearchForPath(const char *pathname);
+        int LoadSymbols(void);
         int ParseDynamic(void);
         void ListSyms(int prange);
-}
+};
 
-#endif
+#endif /* PARSESYMBOLS_H */

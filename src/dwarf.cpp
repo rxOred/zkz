@@ -1,4 +1,4 @@
-#include "dwarf_information.h"
+#include "dwarf.h"
 #include <bits/stdint-uintn.h>
 #include <fcntl.h>
 #include <fstream>

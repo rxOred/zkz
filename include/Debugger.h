@@ -8,8 +8,8 @@
 
 #include "breakpoint.h"
 #include "debug.h"
-#include "dwarf_information.h"
-#include "bin.h"
+#include "dwarf.h"
+#include "parsesymbols.h"
 
 class Main{
 
@@ -21,7 +21,7 @@ class Main{
         DebugLineInfo *m_line_info_ptr;
 
         /* Elf and symbol information */
-        Elf *m_elf_ptr;
+        Symbol *m_symbols_ptr;
 
         /* registers */
         struct user_regs_struct m_regs;
@@ -31,7 +31,8 @@ class Main{
     public:
 
         Main()
-            :m_line_info_ptr(nullptr), m_elf_ptr(nullptr) {}
+            :m_line_info_ptr(nullptr), m_symbols_ptr(nullptr) 
+        {}
 
         ~Main();
         void ParseArguments(int argc, char *argv[]);

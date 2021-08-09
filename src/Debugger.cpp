@@ -27,8 +27,8 @@
 #include "debug.h"
 #include "utils.h"
 #include "registers.h"
-#include "dwarf_information.h"
-#include "bin.h"
+#include "dwarf.h"
+#include "parsesymbols.h"
 #include "Debugger.h"
 #include "log.h"
 
@@ -47,17 +47,14 @@ int Main::WaitForProcess(void)
     waitpid(m_debug.GetPid(), &wstatus, 0);
 
     if(WIFEXITED(wstatus)){
-
         log.Info("Process terminated with %d\n", wstatus);
         m_debug.SetProgramState(false);
         return EXIT_STATUS;
     }
-    else if(WIFSTOPPED(wstatus)){
-
+    else if(WIFSTOPPED(wstatus))
         return STOPPED_STATUS;
-    }
-    else if(WIFSIGNALED(wstatus)){
 
+    else if(WIFSIGNALED(wstatus)){
         log.Info("Process recieved a signal %d\n", wstatus);
         /*
          * replace wstatus with signal
@@ -108,13 +105,12 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address)
         return -1;
     }
     if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-
         log.PError("Ptrace error");
         return -1;
     }
+
     m_regs.rip = address;
     if(ptrace(PTRACE_SETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-
         log.PError("Ptrace error");
         return -1;
     }
@@ -124,17 +120,15 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address)
         log.PError("Ptrace error");
         return -1;
     }
+
     log.Debug("does not make it here\n");
 
     int ret = WaitForProcess();
     if(ret == EXIT_STATUS){
-
         return EXIT_STATUS;
     }
-    else{
-
+    else
         log.Debug("process stopped or signled\n");
-    }
 
     return 0;
 }
@@ -144,17 +138,16 @@ int Main::PlaceBreakpoint(BreakpointList& li, uint64_t address) const
     uint64_t origdata = ptrace(PTRACE_PEEKTEXT, m_debug.GetPid(), address, nullptr);
 
     if(origdata < 0){
-
         log.PError("Ptrace error");
         return -1;
     }
 
     uint64_t data_w_interrupt = ((origdata & 0xffffffffffffff00) | 0xcc);
     if(ptrace(PTRACE_POKETEXT, m_debug.GetPid(), address, data_w_interrupt) < 0){
-
         log.PError("Ptrace error");
         return -1;
     }
+
     li.AppendElement(address, origdata);
     log.Print("Breakpoint placed at address : %x\n", address);
     return 0;
@@ -166,41 +159,30 @@ int Main::StepAuto(BreakpointList& li)
     do{
 
         if(ptrace(PTRACE_SINGLESTEP, m_debug.GetPid(), nullptr, nullptr) < 0){
-
             log.PError("Ptrace eror");
             return -1;
         }
 
         int ret = WaitForProcess();
-        if(ret == EXIT_STATUS){
-
+        if(ret == EXIT_STATUS)
             return EXIT_STATUS;
-        }
-        else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS){
 
+        else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS)
             log.Print("---> rip: %x\n", m_regs.rip);
-        }
 
-        if(m_debug.GetInforeg()){
-
+        if(m_debug.GetInforeg())
             InfoRegistersAll(m_debug, m_regs);
-        }
 
         if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-
             log.PError("Ptrace error");
             return -1;
         }
-
         Breakpoint *b  = li.GetElementByAddress(m_regs.rip - 1);
-        if(b == nullptr){
-
+        if(b == nullptr)
             continue;
-        }
+
         else{
-
             if(b->GetState()){
-
                 log.Info("Stopped execution at %x : breakpoint number %d\n", 
                         m_regs.rip -1, b->m_breakpoint_number);
 
@@ -208,7 +190,6 @@ int Main::StepAuto(BreakpointList& li)
                 return 0;
             }
             else{
-
                 RestoreBreakpoint(b, m_regs.rip - 1);
                 continue;
             }
@@ -222,27 +203,22 @@ int Main::StepAuto(BreakpointList& li)
 int Main::StepX(BreakpointList& li, int number_of_steps) 
 {
     for (int i = 0; i < number_of_steps; i++){
-
         if(ptrace(PTRACE_SINGLESTEP, m_debug.GetPid(), nullptr, nullptr) < 0){
-
             log.PError("Ptrace error");
             return -1;
         }
 
         int ret = WaitForProcess();
-        if(ret == EXIT_STATUS){
-
+        if(ret == EXIT_STATUS)
             return EXIT_STATUS;
-        }
+
         else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS){
 
             if(m_debug.GetInforeg()){
-
                 InfoRegistersAll(m_debug, m_regs);
             }
 
             if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-
                 log.PError("Ptrace error");
                 return -1;
             }
@@ -250,20 +226,17 @@ int Main::StepX(BreakpointList& li, int number_of_steps)
             Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);
             if(b == nullptr)
                 continue;
+
             else{
-
                 if(b->GetState()){
-
-                    log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs
-                            .rip -1, b->m_breakpoint_number);
+                    log.Info("Stopped execution at %x : breakpoint number %d\n", 
+                            m_regs.rip -1, b->m_breakpoint_number);
 
                     if(RestoreBreakpoint(b, m_regs.rip - 1) < -1)
                         return -1;
                     return 0;
                 }
                 else{
-
-
                     if(RestoreBreakpoint(b, m_regs.rip - i) < -1)
                         return -1;
                     continue;
@@ -283,36 +256,29 @@ int Main::ContinueExecution(BreakpointList& li)
       * execution.
       */
     if(m_debug.GetSyscallState()){
-
         m_debug.SetSyscallState(false);
     }
 
     log.Info("Continuing execution...\n"); 
     if(m_debug.GetSystrace()){
-
         log.Debug("stopping at syscalls\n");
         if(ptrace(PTRACE_SYSCALL, m_debug.GetPid(), nullptr, nullptr) < 0){
-
             log.PError("Ptrace error");
             return -1;
         }
     }
     else{
-
         if(ptrace(PTRACE_CONT, m_debug.GetPid(), nullptr, nullptr) < 0){
-
             log.PError("Ptrace error");
             return -1;
         }
     }
 
     int ret = WaitForProcess();
-    if(ret == EXIT_STATUS) {
-
+    if(ret == EXIT_STATUS)
         return EXIT_STATUS;
-    }
-    if(ret == STOPPED_STATUS){
 
+    if(ret == STOPPED_STATUS){
         if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
 
             log.PError("Ptrace error");
@@ -320,31 +286,32 @@ int Main::ContinueExecution(BreakpointList& li)
         }
 
         log.Debug("Prcoess stopped at address %x\n", m_regs.rip - 1);
-
         /* 
          * if this return null, we are not in a breakpoint, so reason for SIGSTOP/\
          * SIGTRAP must be a system call if systrace is enabled
          */
         Breakpoint *b = li.GetElementByAddress(m_regs.rip - 1);
         if(b == nullptr){
-
             if(m_debug.GetSystrace()){
                 log.Info("System call intercepted: %x\n", m_regs.rax);
                 m_debug.SetSyscallState(true);
 
                 if(m_debug.GetInforeg()){
-
                     log.Debug("Register information flag is set\n");
                     InfoRegistersAll(m_debug, m_regs);
                 }
                 return 0;
             }
             else {
-
                 int ret = ContinueExecution(li);
-                if(ret == EXIT_STATUS) return EXIT_STATUS;
-                else if(ret == -1) return -1;
-                else return 0;
+                if(ret == EXIT_STATUS)
+                    return EXIT_STATUS;
+
+                else if(ret == -1) 
+                    return -1;
+
+                else
+                    return 0;
             }
         }
         else{
@@ -354,14 +321,12 @@ int Main::ContinueExecution(BreakpointList& li)
              * we have to restore breakpoint instruction before continue
              */
             if(b->GetState()){ 
-
                 log.Info("Stopped execution at %x : breakpoint number %d\n", m_regs.
                         rip -1, b->m_breakpoint_number);
 
-                if(m_debug.GetInforeg()){
-
+                if(m_debug.GetInforeg())
                     InfoRegistersAll(m_debug, m_regs);
-                }
+
                 log.Debug("Enabled breakpoint\n");
                 if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
                 return 0;
@@ -375,9 +340,14 @@ int Main::ContinueExecution(BreakpointList& li)
                 log.Debug("Disabled breakpoint\n");
                 if(RestoreBreakpoint(b, m_regs.rip - 1) < -1) return -1;
                 int ret = ContinueExecution(li);
-                if(ret == EXIT_STATUS) return EXIT_STATUS;
-                else if(ret == -1) return -1;
-                else return 0;
+                if(ret == EXIT_STATUS)
+                    return EXIT_STATUS;
+
+                else if(ret == -1)
+                    return -1;
+
+                else
+                    return 0;
             }
         }
     }
@@ -405,7 +375,6 @@ void Main::InitDebugLines(void)
 
     int fd = open(m_debug.GetPathname()[0], O_RDONLY);
     if(fd < 0){
-
         log.PError("File open error");
         m_debug.SetDwarf();
     }
@@ -416,7 +385,6 @@ void Main::InitDebugLines(void)
     int i = 0;
 
     for(auto cu : dwarf_f.compilation_units()){
-
         const dwarf::line_table &lt = cu.get_line_table();
         ParseLines(lt, i);
         i++;
@@ -436,37 +404,37 @@ int Main::MainLoop(void)
 
         log.Prompt("[zkz] ");
         if(!std::getline(std::cin, command)){
-
             log.Error("IO error\n");
             return -1;
         }
-        if(command.empty()) continue;
+
+        if(command.empty())
+            continue;
 
         std::stringstream strstrm(command);
         std::vector<std::string> commands{};
         std::string word;
 
         while(std::getline(strstrm, word, ' ')){
-
-            word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
+            word.erase(std::remove_if(word.begin(), word.end(), ispunct), 
+                    word.end());
             commands.push_back(word);
         }
 
         /* 
          * reset is used to restart a process, while it is still running or exited 
          */
-        if(command.compare("run") == 0 || command.compare("r") == 0 || command.compare(
-                    "continue") == 0 || command.compare("c") == 0){
+        if(command.compare("run") == 0 || command.compare("r") == 0 || 
+                command.compare("continue") == 0 || command.compare("c") == 0){
 
             if(!m_debug.GetProgramState()){
-
                 log.Debug("if program is stopped\n");
                 if(m_debug.GetPathname() != nullptr){
-
                     if(StartProcess() < 0) return -1;
                     continue;
                 }
             }
+
             int ret = ContinueExecution(li);
             if(ret == EXIT_STATUS){
 
@@ -479,14 +447,14 @@ int Main::MainLoop(void)
                     getchar();
                     return EXIT_STATUS;
                 }
-                else if (m_debug.GetPathname() != nullptr){
+                else if (m_debug.GetPathname() != nullptr)
 
                     /* 
                      * if pathname is there, we can continue and let user to enter 
                      * reset command
                      */
                     continue;
-                }
+
             }else if(ret == -1) return -1;
         }
 
@@ -495,18 +463,14 @@ int Main::MainLoop(void)
             if(m_debug.GetProgramState()){
 
                 if(m_debug.GetDwarfState()){
-
                     if(commands.size() < 2){
-
                         log.Prompt("Please select a compilation unit");
                         if(!std::getline(std::cin, word)){
-
                             log.Error("IO error");
                             return -1;
                         }
 
                         if(word.empty()){
-
                             log.Error("Invalid unit number.. default unit selected");
                             // dump list
                             continue;
@@ -514,33 +478,25 @@ int Main::MainLoop(void)
 
                         int compilation_unit;
                         try{
-
                             compilation_unit = std::stoi(word, nullptr, 10);
                         }catch (std::out_of_range& err_1){
-
                             log.Error("Invalid range :%s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
-
                             log.Error("Invalid unit number :%s\n", err_2.what());
                             continue;
                         }
 
-                        puts("1");
                         m_line_info_ptr->ListSrcLines(compilation_unit);
                     }
                     else{
-
                         int compilation_unit;
                         try{
-
                             compilation_unit = std::stoi(commands[1],nullptr, 10);
                         }catch(std::out_of_range& err_1){
-
                             log.Error("Invalid range :%s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
-
                             log.Error("Invalid unit number :%s\n", err_2.what());
                             continue;
                         }
@@ -549,12 +505,10 @@ int Main::MainLoop(void)
                     }
                 }
                 else{
-
                     log.Print("Debug information not available\n");
                     continue;
                 }
             }else{
-
                 log.Print("Program is not running\n");
                 continue;
             }
@@ -564,29 +518,24 @@ int Main::MainLoop(void)
             if(m_debug.GetProgramState()){
 
                 if(m_debug.GetSymState()){
-                    if(commands.size() <= 1){
+                    if(commands.size() <= 1)
+                        m_symbols_ptr->ListSyms(-1);
 
-                        m_elf_ptr->ListSyms(-1);
-                    }
                     else{
-
                         int prange;
                         if(!commands[1].empty()){
 
                             try{
-
                                 prange = std::stoi(commands[1], nullptr, 10);
                             }catch(std::invalid_argument& err_1){
-
                                 log.Error("Invalid range %s\n", err_1.what());
                                 continue;
                             }catch(std::out_of_range& err_2){
-
                                 log.Error("Invalid range %s\n", err_2.what());
                                 continue;
                             }
 
-                            m_elf_ptr->ListSyms(prange);
+                            m_symbols_ptr->ListSyms(prange);
                         }
                     }
                 }
@@ -595,143 +544,118 @@ int Main::MainLoop(void)
         else if(commands[0].compare("select") == 0){
 
             if(m_debug.GetProgramState()){
-
                 if(m_debug.GetDwarfState()){
                     if(commands.size() <= 1){
-
                         log.Prompt("Please select a comilation unit\n");
                         if(!std::getline(std::cin, word)){
-
                             log.Error("IO error\n");
                             return -1;
                         }
 
                         if(word.empty()){
-
                             log.Error("Invalid comilation unit number\n");
                             continue;
                         }
-
                         try{
-
                             default_compilation_unit = std::stoi(word, nullptr, 
                                     10);
                         }catch (std::out_of_range const& err_1){
-
                             log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
-
                             log.Error("Invalid compilation unit number %d\n", 
                                     err_2.what());
                             continue;
                         }
                     }
+
                     else{
                         try{
-
                             default_compilation_unit = std::stoi(commands[1], 
                                     nullptr, 10);
-                            if(default_compilation_unit < 0 || default_compilation_unit
-                                    > m_line_info_ptr->GetNoOfCompilationUnits()){
-
-                                log.Error("Compilation unit number is not in range\n");
+                            if(default_compilation_unit < 0 || 
+                                    default_compilation_unit > m_line_info_ptr->
+                                    GetNoOfCompilationUnits()){
+                                log.Error("Compilation unit number is not in range"
+                                        "\n");
                                 continue;
                             }
                             log.Print("Compilation unit : %d selected\n", 
                                     default_compilation_unit);
                         }catch (std::out_of_range const& err_1){
-
                             log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
-
                             log.Error("Invalid compilation unit number %s\n",
                                     err_2.what());
                             continue;
                         }
                     }
                 }else{
-
                     log.Print("Debug information not available\n");
                     continue;
                 }
             }else{
-
                 log.Print("[!] Process is not running\n");
                 continue;
             }
         }
         else if(commands[0].compare("breakl") == 0 || commands[0].compare("bl") == 0){
-
             if(m_debug.GetProgramState()){
-
                 if(m_debug.GetDwarfState()){
-
                     log.Debug("Breakpoint at line number\n");
                     uint64_t address;
                     if(commands.size() < 2){
-
                         log.Prompt("Enter line to place a breakpoint >");
                         if(!std::getline(std::cin, word)){
-
                             log.Error("IO error\n");
                             return -1;
                         }
 
                         if(word.empty()){
-
                             log.Error("Invalid line number\n");
                             continue;
                         }
 
                         try{
-
                             address = m_line_info_ptr->GetAddressByLine(
                                     default_compilation_unit, 
                                     std::stoi(word, nullptr, 10));
                             if(address < 0){
-
                                 log.Error("Address for corresponding line is not found"
                                         "\n");
                                 continue;
                             }
- 
                        }catch (std::out_of_range& err_1) {
-
                             log.Error("Invalid range %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2) {
-
                             log.Error("Invalid line number %s\n", err_2.what());
                             continue;
                         }
 
                        if(PlaceBreakpoint(li, address) < 0) continue;
                     }
-                    else{
 
+                    else{
                         for (int i = 1; i < commands.size(); i++){
                             try{
-
                                 address = m_line_info_ptr->GetAddressByLine(
                                         default_compilation_unit, 
                                         std::stoi(commands[i], nullptr, 10));
                             }catch (std::out_of_range& err_1) {
-
                                 log.Error("Invalid range %s\n", err_1.what());
                                 continue;
                             }catch (std::invalid_argument& err_2) {
-
                                 log.Error("Invalid line number %s\n", err_2.what());
                                 continue;
                             }
+
                             /* 
-                             * if this true, indicates that address is specified line 
+                             * if this true, indicates that address is specified line
                              * does not match to an address
                              */
                             if(address < 0){
-
                                 log.Error("Address for corresponding line is not found \
                                         \n");
                                 continue;
@@ -740,13 +664,11 @@ int Main::MainLoop(void)
                         }
                     }
                 }else {
-
                     log.Print("Debug information not available\n");
                     continue;
                 }
             }
             else{
-
                 log.Print("[!] Process is not running\n");
                 continue;
             }
@@ -759,18 +681,14 @@ int Main::MainLoop(void)
              * mentioned ann address to place a breakpoint 
              */
             if(m_debug.GetProgramState()){
-
                 if(commands.size() <= 1){
-
                     log.Prompt("Enter memory address to place a breakpoint");
                     if(!std::getline(std::cin, word)){
-
                         log.Error("IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
-
                         log.Error("Invalid memory address\n");
                         continue;
                     }
@@ -781,14 +699,11 @@ int Main::MainLoop(void)
                     uint64_t address;
 
                     try{
-
                         address = std::stoll(word, nullptr, 16);
                     }catch(std::invalid_argument& err_1){
-
                         log.Error("Invalid memory address :%s\n", err_1.what());
                         continue;
                     }catch(std::out_of_range& err_2){
-
                         log.Error("Invalid range :%s\n", err_2.what());
                         continue;
                     }
@@ -806,17 +721,13 @@ int Main::MainLoop(void)
                      * because 0th index is the command 
                      */
                     for (int i = 1; i < static_cast<int>(commands.size()); i++){
-
                         uint64_t address;
                         try{
-
                             address = std::stoll(commands[i], nullptr, 16);
                         }catch(std::out_of_range& err_1){
-
                             log.Error("Invalid range :%s\n", err_1.what());
                             continue;
                         }catch(std::invalid_argument& err_2){
-
                             log.Error("Invalid memory address :%s\n", err_2.what());
                             continue;
                         }
@@ -833,7 +744,6 @@ int Main::MainLoop(void)
         else if(command.compare("info registers") == 0 || command.compare("i r") == 0
                 | command.compare("i registers") == 0 || command.compare("info r") == 0)
         {
-
             if(m_debug.GetProgramState()){
                 InfoRegistersAll(m_debug, m_regs);
             }
@@ -845,12 +755,9 @@ int Main::MainLoop(void)
         }
 
         else if(command.compare("printb") == 0){
-
             if(m_debug.GetProgramState()){
-
                 li.ListBreakpoints();
             }else{
-
                 log.Print("Program is not running");
                 continue;
             }
@@ -860,50 +767,39 @@ int Main::MainLoop(void)
 
             if(m_debug.GetProgramState()){
                 if(commands[1].empty()){
-
                     log.Prompt("Enter breakpoint number to remove");
                     if(!std::getline(std::cin, word)){
-
                         log.Error("IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
-
                         log.Error("Invalid breakpoint number\n");
                         return -1;
                     }
 
                     try{
-
                         if(li.RemoveElement(m_debug, std::stoi(word, nullptr, 10)) < 0)
                             return -1;
                     }catch (std::out_of_range& err_1) {
-
                         log.Error("Invalid range : %s\n", err_1.what());
                         continue;
                     }catch (std::invalid_argument& err_2) {
-
                         log.Error("Invalid address or line number : %s\n", err_2.what());
                         continue;
                     }
 
                 }
                 else{
-
                     for (int i = 1; i < commands.size(); i++){
-
                         try {
-
                             if(li.RemoveElement(m_debug, std::stoi(commands[i], nullptr
                                             , 10)) < 0)
                                 return -1;
                         }catch (std::out_of_range& err_1) {
-
                             log.Error("Invalid range : %s\n", err_1.what());
                             continue;
                         }catch (std::invalid_argument& err_2){
-
                             log.Error("Invalid address or line number : %s\n", err_2.
                                     what());
                             continue;
@@ -919,18 +815,14 @@ int Main::MainLoop(void)
         else if(commands[0].compare("set") == 0){
 
             if(m_debug.GetProgramState()){
-
                 if(commands.size() == 1){
-
                     log.Prompt("Enter register name");
                     if(!std::getline(std::cin, word)){
-
                         log.Error("IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
-
                         log.Error("Invalid register name\n");
                         continue;
                     }
@@ -939,34 +831,29 @@ int Main::MainLoop(void)
 
                     log.Prompt("Enter value");
                     if(!std::getline(std::cin, word)){
-
                         log.Error("IO error\n");
                         return -1;
                     }
 
                     if(word.empty()){
-
                         log.Error("Invalid value\n");
                         continue;
                     }
 
                     uint64_t value;
                     try{
-
                         value = std::stoll(word, nullptr, 16);
                     }catch (std::out_of_range& err_1){
-
                         log.Error("Invalid range :%s\n", err_1.what());
                         continue;
                     }catch (std::invalid_argument& err_2){
-
                         log.Error("Invalid value :%s\n", err_2.what());
                         continue;
                     }
+
                     if(SetRegister(m_debug, m_regs, regname, value) < -1) return -1;
                 }
                 else if(commands.size() == 2){
-
                     log.Prompt("Enter value");
                     if(!std::getline(std::cin, word)){
 
@@ -975,42 +862,36 @@ int Main::MainLoop(void)
                     }
 
                     if(word.empty()){
-
                         log.Error("Invalid value");
                         continue;
                     }
 
                     uint64_t value;
                     try{
-
                         value = std::stoll(word, nullptr, 16);
                     }catch (std::out_of_range& err_1){
-
                         log.Error("Invalid range :%s\n", err_1.what());
                         continue;
                     }catch (std::invalid_argument& err_2){
-
                         log.Error("Invalid value :%s\n", err_2.what());
                         continue;
                     }
+
                     if(SetRegister(m_debug, m_regs, commands[1], value) < 0) return -1;
                 }
                 else if(command.size() == 3){
-
                     uint64_t value;
 
                     try{
-
                         value = std::stoll(commands[2], nullptr, 16);
                     }catch(std::out_of_range& err_1){
-
                         log.Error("Invalid range :%s\n", err_1.what());
                         continue;
                     }catch(std::invalid_argument& err_2){
-
                         log.Error("Invalid argument :%s\n", err_2.what());
                         continue;
                     }
+
                     if(SetRegister(m_debug, m_regs, commands[1], value) < 0) return -1;
                 }
             }else{
@@ -1022,38 +903,31 @@ int Main::MainLoop(void)
         else if(commands[0].compare("disable") == 0 || commands[0].compare("dis") == 0){
 
             if(commands.size() < 2){
-
                 log.Prompt("Enter breakpoint number to disable");
                 if(!std::getline(std::cin, word)){
-
                     log.Error("IO error\n");
                     return -1;
                 }
 
                 if(word.empty()){
-
                     log.Error("Invalid breakpoint number\n");
                     return -1;
                 }
+
                 //check errors
                 if(DisableBreakpoint(li, std::stoi(word, nullptr, 10)) < 0)
                     continue;
             }
             else{
-
                 for (int i = 1; i < commands.size(); i++){
-
                     try{
-
                         if(DisableBreakpoint(li, std::stoi(commands[i], nullptr, 10)) 
                                 < 0)
                             continue;
                     }catch (std::out_of_range& err_1) {
-
                         log.Error("Invalid range\n");
                         continue;
                     }catch (std::invalid_argument& err_2) {
-
                         log.Error("Invalid address or line number\n");
                         continue;
                     }
@@ -1064,27 +938,21 @@ int Main::MainLoop(void)
         else if(commands[0].compare("info") == 0){
  
             if(commands[1].empty()){
-
                 log.Prompt("Enter a register");
                 std::getline(std::cin, word);
                 if(word.empty()){
-
                     log.Error("Invalid register\n");
                     continue;
                 }
-                else{
-
+                else
                     if(InfoRegister(m_debug, m_regs, word) < 0) return -1;
-                }
-            }
-            else{
 
-                if(InfoRegister(m_debug, m_regs, commands[1]) < 0) return -1; 
             }
+            else
+                if(InfoRegister(m_debug, m_regs, commands[1]) < 0) return -1; 
         }
 
         else if(commands[0].compare("auto") == 0 || commands[0].compare("a") == 0){
-
             if(StepAuto(li) < 0)
                 return -1;
         }
@@ -1092,55 +960,45 @@ int Main::MainLoop(void)
         else if(commands[0].compare("step") == 0 || commands[0].compare("s") == 0){
 
             if(commands.size() > 1){
-
                 int number_of_steps;
                 try{
-
                     number_of_steps = std::stoi(commands[1], nullptr, 10);
                     log.Debug("%d\n", number_of_steps);
                 }catch (std::out_of_range& err_1){
-
                     log.Error("Invalid range\n");
                     continue;
                 }catch (std::invalid_argument& err_2){
-
                     log.Error("Invalid address or line number\n");
                     continue;
                 }
 
                 int ret = StepX(li, number_of_steps);
                 if(ret == EXIT_STATUS){
-
                     if(m_debug.GetPathname() == nullptr && m_debug.GetPid() != 0){
-
                         log.Prompt("[!] Press any key to exit zkz");
                         getchar();
                         return EXIT_STATUS;
                     }
 
-                    else if(m_debug.GetPathname() != nullptr){
-
+                    else if(m_debug.GetPathname() != nullptr)
                         continue;
-                    }
                 }
-                else if (ret == -1) return -1;
+
+                else if (ret == -1)
+                    return -1;
             }
             else{       // else we just step 1
 
                 int ret = StepX(li, 1);
                 if(ret == EXIT_STATUS){
-
                     if(m_debug.GetPathname() == nullptr && m_debug.GetPid() != 0){
-
                         log.Prompt("[!] Press any key to exit zkz");
                         getchar();
                         return EXIT_STATUS;
                     }
 
-                    else if(m_debug.GetPathname() != nullptr){
-
+                    else if(m_debug.GetPathname() != nullptr)
                         continue;
-                    }
                 }
                 else if (ret == -1) return -1;
             }
@@ -1171,20 +1029,16 @@ int Main::MainLoop(void)
 
 #endif
         else if(command.compare("exit") == 0){
-
             log.Prompt("Do you want to kill the process? [yes/no] ");
             if(!std::getline(std::cin, word)){
-
                 log.Error("IO error\n");
                 return -1;
             }
             if(word.empty()){
-
                 log.Print("Assumed [no]\n");
                 continue;
             }
             if(word.compare("yes") == 0 || word.compare("y") == 0){
-
                 KillProcess(m_debug.GetPid());
                 return 0;
             }
@@ -1192,7 +1046,6 @@ int Main::MainLoop(void)
         }
 
         else if(command.compare("help") == 0){
-
             PrintHelp();
         }
     }
@@ -1210,13 +1063,11 @@ uint64_t Main::GetBaseAddress(pid_t pid) const
 
     FILE *fh = fopen(proc_path, "r");
     if(!fh){
-
         log.PError("fopen failed");
         goto failed;
     }
 
     for(int i = 0; i < 16; i++, p++){
-
         *addr_buf = fgetc(fh);
         if(!std::isalnum(*addr_buf))
             goto char_failed;
@@ -1234,37 +1085,29 @@ failed:
 int Main::StartProcess(void) 
 {
     if(m_debug.GetPathname()){
-
         pid_t pid = fork();
         if(pid == -1){
-
             log.PError("Fork failed");
             return -1;
         }
         else if(pid == 0){
-
             personality(ADDR_NO_RANDOMIZE);
             if(ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0){
-
                 log.PError("Ptrace failed");
                 exit(EXIT_FAILURE);
             }
             char **pathname = m_debug.GetPathname();
             if(execvp(pathname[0], pathname) == -1){
-
                 log.PError("Execvp failed");
                 exit(EXIT_FAILURE);
             }
         }
         else{
-
             int ret = WaitForProcess();
-            if(ret == EXIT_STATUS) {
-
+            if(ret == EXIT_STATUS)
                 return 1;
-            }
-            else if(ret == SIGNALED_STATUS || ret == STOPPED_STATUS){
 
+            else if(ret == SIGNALED_STATUS || ret == STOPPED_STATUS){
                 m_debug.SetProgramState(true);
                 /* 
                  * no one should set this to true except start_process an attach_
@@ -1282,13 +1125,14 @@ int Main::AttachProcess(void)
 {
     if(m_debug.GetPid() != 0){
         if(ptrace(PTRACE_ATTACH, m_debug.GetPid(), nullptr, nullptr) < 0){
-
             log.PError("Ptrace error");
             return -1;
         }
 
         int ret = WaitForProcess();
-        if(ret ==  EXIT_STATUS) return 1;
+        if(ret ==  EXIT_STATUS)
+            return 1;
+
         else if(ret == STOPPED_STATUS || ret == SIGNALED_STATUS)
             return 0;
     }
@@ -1299,22 +1143,16 @@ void Main::ParseArguments(int argc, char *argv[])
 {
     char **pathname = nullptr;
     for(int i = 1; i < argc; i++){
-
         if (strcmp(argv[i], "-f") == 0){
-
             int j, count = 0;
             i++;
             for(j = i; j < argc; j++){
-
                 if(argv[j][0] == '-') break;
-
                 pathname = (char **)realloc(pathname, sizeof(char **) * (count + 2));
                 if(!pathname){
-
                     log.PError("Memory allocation error");
                     goto failed;
                 }
- 
                 pathname[count] = argv[j];
                 count++;
             }
@@ -1325,10 +1163,8 @@ void Main::ParseArguments(int argc, char *argv[])
             i = j - 1;
         }
         else if(strcmp(argv[i], "-p") == 0){
-
             i++;
             if(!argv[i] || i == argc) {
-
                 log.Error("Expected a process id\n");
                 /* 
                  * user have to specify a process id 
@@ -1338,33 +1174,28 @@ void Main::ParseArguments(int argc, char *argv[])
             else m_debug.SetPid(atoi(argv[i]));
         }
         else if(strcmp(argv[i], "-s") == 0){
-
             i++;
             if(i == argc || !argv[i]){
-
                 goto failed;
             }
+
             if(atoi(argv[i]) > 0){
 
                 m_debug.SetSystrace();
             }
         }
+
         else if(strcmp(argv[i], "-i") == 0){
 
             i++;
-            if(i == argc || !argv[i]) {
-
+            if(i == argc || !argv[i])
                 goto failed;
-            }
-            if(atoi(argv[i]) > 0){
 
+            if(atoi(argv[i]) > 0)
                 m_debug.SetInforeg();
-            }
         }
-        else{
-
+        else
             goto failed;
-        }
     }
 
 failed:
@@ -1381,30 +1212,27 @@ int Main::Debugger(void)
         PrintUsage();
     }
     else if(m_debug.GetPid() != 0){
-
         int ret = AttachProcess();
         if(ret == 1) return 0;
         else if(ret == -1) return -1;
     }
     else if(m_debug.GetPathname()){
-
         int ret = StartProcess();
         if(ret == 1) return 0;
         else if(ret == -1) return -1;
     }
 
     m_base_addr = GetBaseAddress(m_debug.GetPid());
-    m_elf_ptr = new Elf(m_debug.GetPid(), m_debug.GetPathname()[0], m_base_addr);
+    m_symbols_ptr = new Symbol(m_debug.GetPathname()[0], m_base_addr);
     m_line_info_ptr = new DebugLineInfo(m_base_addr);
 
     std::thread worker_debuglines(&Main::InitDebugLines, this);
-    std::thread worker_elfsyms(&Elf::OpenFile, m_elf_ptr, 0);
+    std::thread worker_elfsyms(&Symbol::OpenFile, m_symbols_ptr, 0);
 
     /*
      * printing where rip is at 
      */
     if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-
         log.PError("Ptrace error");
         return -1;
     }
@@ -1413,8 +1241,7 @@ int Main::Debugger(void)
     worker_elfsyms.join();
     worker_debuglines.join();
 
-    if(m_elf_ptr->b_load_failed){
-
+    if(m_symbols_ptr->b_load_failed){
         log.Error("Error parsing symbols");
         m_debug.SetSym();
     }
@@ -1426,7 +1253,7 @@ int Main::Debugger(void)
 
 Main::~Main(void)
 {
-    delete m_elf_ptr;
+    delete m_symbols_ptr;
     delete m_line_info_ptr;
 }
 
