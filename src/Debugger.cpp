@@ -167,7 +167,7 @@ int Main::StepAuto(BreakpointList& li)
 
         if(ptrace(PTRACE_SINGLESTEP, m_debug.GetPid(), nullptr, nullptr) < 0){
 
-            log.PError("Ptrace error");
+            log.PError("Ptrace eror");
             return -1;
         }
 
