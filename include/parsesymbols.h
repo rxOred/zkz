@@ -17,6 +17,7 @@ class Symbol: public Elf {
 
         ~Symbol();
 
+        int OpenFile(int index);
         int LoadSymbols();
         void RemoveMap(void);
         int ParseDynamic(void);
