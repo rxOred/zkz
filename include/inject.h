@@ -5,24 +5,32 @@
 #include <cstdint>
 #include <sys/types.h>
 
+#include "elfp.h"
+
+/* 
+ * node that holds shellcode, length and injected address
+ */
 class ShellcodeNode {
     private:
         void *m_shellcode;
         uint64_t m_shellcode_addr;
         size_t m_shellcode_len;
-        ShellcodeNode *m_next;
 
     public:
-        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, size_t 
-                shellcode_len)
+        ShellcodeNode *m_next;
+        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, 
+                size_t shellcode_len)
             : m_shellcode(shellcode), m_shellcode_addr(shellcode_addr), 
-            m_shellcode_len(shellcode_len)
+            m_shellcode_len(shellcode_len), m_next(nullptr)
         {}
 
         ~ShellcodeNode();
         int InjectToProcessImage();
 };
 
+/*
+ * double linked list of shellcodes
+ */
 class ShellcodeList {
     private:
         ShellcodeNode *m_head;
@@ -35,7 +43,7 @@ class ShellcodeList {
         {}
 
         ~ShellcodeList();
-        void AppendShellcode(void *shellcode, uint64_t shellcode_addr, size_t
+        int AppendShellcode(void *shellcode, uint64_t shellcode_addr, size_t
                 shellcode_len);
         void RemoveShellcode(uint64_t *shellcode_addr, size_t shellcode_len);
 };
