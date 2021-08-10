@@ -793,8 +793,8 @@ int Main::MainLoop(void)
                 else{
                     for (int i = 1; i < commands.size(); i++){
                         try {
-                            if(li.RemoveElement(m_debug, std::stoi(commands[i], nullptr
-                                            , 10)) < 0)
+                            if(li.RemoveElement(m_debug, std::stoi(commands[i], nullptr, 10))
+                                    < 0)
                                 return -1;
                         }catch (std::out_of_range& err_1) {
                             log.Error("Invalid range : %s\n", err_1.what());
@@ -1010,21 +1010,47 @@ int Main::MainLoop(void)
         }
 #endif
 #ifdef INJECT
-        else if(command.compare("inject") == 0){
+        else if(commands[0].compare("inject") == 0){
 
-            log.Prompt("shellcode >");
-            if(!std::getline(std::cin, word)){
+            if(command.size() < 2){
+                log.Print("Injecting shellcode into a free address in .text segment");
+                log.Prompt("shellcode >");
+                if(!std::getline(std::cin, word)){
+                    log.Error("IO error\n");
+                    return -1;
+                }
+                if(word.empty()){
+                    log.Print("invalid byte sequence\n");
+                    continue;
+                }
 
-                log.Error("IO error\n");
-                return -1;
+                //inject code
             }
-            if(word.empty()){
+            else{
+                uint64_t addr;
+                try{
+                    addr = std::stoll(commands[1], nullptr, 16);
+                }catch (std::out_of_range& err_1){
+                    log.Error("Invalid range: %s\n", err_1.what());
+                    continue;
+                }catch (std::invalid_argument& err_2){
+                    log.Error("Invalid value :%s\n", err_2.what());
+                    continue;
+                }
 
-                log.Print("invalid code\n");
-                continue;
+                log.Prompt("shellcode >");
+                if(!std::getline(std::cin, word)){
+                    log.Error("IO error\n");
+                    return -1;
+                }
+
+                if(word.empty()){
+                    log.Print("Invalid byte sequence\n");
+                    continue;
+                }
+
+                //inject code
             }
-
-            
         }
 
 #endif
@@ -1045,9 +1071,8 @@ int Main::MainLoop(void)
             else continue;
         }
 
-        else if(command.compare("help") == 0){
+        else if(command.compare("help") == 0)
             PrintHelp();
-        }
     }
     return 0;
 }
@@ -1175,14 +1200,11 @@ void Main::ParseArguments(int argc, char *argv[])
         }
         else if(strcmp(argv[i], "-s") == 0){
             i++;
-            if(i == argc || !argv[i]){
+            if(i == argc || !argv[i])
                 goto failed;
-            }
 
-            if(atoi(argv[i]) > 0){
-
+            if(atoi(argv[i]) > 0)
                 m_debug.SetSystrace();
-            }
         }
 
         else if(strcmp(argv[i], "-i") == 0){
