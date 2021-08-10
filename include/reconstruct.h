@@ -31,4 +31,4 @@ class Reconstruct : public Elf{
         void LocateGlobalOffsetTable();
 };
 
-#endif
+#endif /* RECONSTRUCT_H */

@@ -48,4 +48,4 @@ class ShellcodeList {
         void RemoveShellcode(uint64_t *shellcode_addr, size_t shellcode_len);
 };
 
-#endif /* inject.h */
+#endif /* INJECT_H */
