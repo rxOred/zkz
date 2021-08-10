@@ -16,21 +16,24 @@ int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
        perror("[X] Ptrace error");
        return -1;
     }
-    log.Print("Info registers :\n\tRAX: %llx\n\tRCX: %llx\n\tRDX: %llx\n\tRBX: %llx\n\tRSP: "
-          "%x\n\tRBP: %x\n\tRSI: %x\n\tRDI: %x\n\tR8: %x\n\tR9: %x\n\tR10: "
-          "%x\n\tR11: %x\n\tR12: %x\n\tR13: %x\n\tR14: %x\nR15: %x\n", 
-          regs.rax, regs.rcx, regs.rdx, regs.rbx, regs.rsp, regs.rbp, regs.rsi, regs.rdi, 
-          regs.r8, regs.r9, regs.r10, regs.r11, regs.r12, regs.r13, regs.r14, regs.r15);
+    log.Print("Info registers :\n\tRAX: %llx\n\tRCX: %llx\n\tRDX: %llx\n\tRBX: "
+          "%llx\n\tRSP: %x\n\tRBP: %x\n\tRSI: %x\n\tRDI: %x\n\tR8: %x\n\tR9: "
+          "%x\n\tR10: %x\n\tR11: %x\n\tR12: %x\n\tR13: %x\n\tR14: %x\nR15: %x\n",
+          regs.rax, regs.rcx, regs.rdx, regs.rbx, regs.rsp, regs.rbp, regs.rsi, 
+          regs.rdi, regs.r8, regs.r9, regs.r10, regs.r11, regs.r12, regs.r13, 
+          regs.r14, regs.r15);
 
     return 0;
 }
 
-#define DEFINE_INFO_HANDLER(__reg) static void reg_info_handler_##__reg(struct user_regs_struct& regs){ \
+#define DEFINE_INFO_HANDLER(__reg) static void reg_info_handler_##__reg(struct  \
+        user_regs_struct& regs){                                \
         log.Print("%s : %lx\n", #__reg, regs.__reg);            \
         return;                                                 \
     }
 
-#define DEFINE_SET_HANDLER(__reg) static void reg_set_handler_##__reg(struct user_regs_struct& regs, uint64_t value){     \
+#define DEFINE_SET_HANDLER(__reg) static void reg_set_handler_##__reg(struct    \
+        user_regs_struct& regs, uint64_t value){            \
     regs.__reg = value;                                     \
     return;                                                 \
 }

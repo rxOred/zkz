@@ -11,7 +11,6 @@
  * NOTE each of these represent a line and its corresponding address, compilation_unit 
  */
 class Lineinfo{
-
     public:
         int m_line_number;
         uint64_t m_address;
@@ -50,21 +49,20 @@ class DebugLineInfo{
         /*
          * this method is kinda useless rn
          */
-        inline uint64_t GetElementByIndex(int index){
-
+        inline uint64_t GetElementByIndex(int index)
+        {
             return D_lines[index]->m_address;
         }
 
-        inline int GetNoOfCompilationUnits(void){
-
+        inline int GetNoOfCompilationUnits(void)
+        {
             int max = 0;
             for (auto x = D_lines.begin(); x != D_lines.end(); x++){
-
                 if((*x)->m_unit_number > max){
-
                     max = (*x)->m_unit_number;
                 }
             }
+
             return max;
         }
 
