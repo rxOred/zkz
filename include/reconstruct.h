@@ -25,9 +25,10 @@ class Reconstruct : public Elf{
         {}
 
         ~Reconstruct();
-        void ReadTextSegment(void *src, void *dst, int len);
-        void ReadSegment(void *src, void *dst, int len);
-        void ReadDataSegment(void *src, void *dst, int len);
+        int InitReconstruction(void);
+        int ReadTextSegment(void);
+        int ReadSegment(void *dst, uint32_t p_type, uint32_t p_flags);
+        int ReadDataSegment(void);
         void LocateGlobalOffsetTable();
 };
 
