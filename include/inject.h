@@ -25,11 +25,21 @@ class ShellcodeNode {
         {}
 
         ~ShellcodeNode();
+        inline uint64_t GetShellcodeAddr(void) const
+        {
+            return m_shellcode_addr;
+        }
+
+        inline size_t GetShellcodeLen(void) const
+        {
+            return m_shellcode_len;
+        }
+
         int InjectToProcessImage();
 };
 
 /*
- * double linked list of shellcodes
+ * singly linked list of shellcodes injected to the process
  */
 class ShellcodeList {
     private:
@@ -43,9 +53,10 @@ class ShellcodeList {
         {}
 
         ~ShellcodeList();
-        int AppendShellcode(void *shellcode, uint64_t shellcode_addr, size_t
+        int AppendNode(void *shellcode, uint64_t shellcode_addr, size_t
                 shellcode_len);
-        void RemoveShellcode(uint64_t *shellcode_addr, size_t shellcode_len);
+        ShellcodeNode *GetNodeByAddress(uint64_t shellcode_addr) const;
+        int RemoveNode(uint64_t shellcode_addr);
 };
 
 #endif /* INJECT_H */
