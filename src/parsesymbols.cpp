@@ -22,6 +22,10 @@ Symbol::~Symbol()
     }
 }
 
+/*
+ * this is wrapper around OpenElf, and LoadSymbols
+ * corresponding ro InitReconstruction in Reconstruct class
+ */
 int Symbol::OpenFile(int index){
     if(OpenElf((const char *)P_list[index]) < 0){
         goto failed;
@@ -126,7 +130,7 @@ int Symbol::ParseDynamic(void)
             dyn = (Elf64_Dyn *)&m_mapping[m_shdr[i].sh_offset];
 
             for(int j = 0; j < m_shdr[i].sh_size / sizeof(Elf64_Dyn); j++){
-                if(dyn[j].d_tag == DT_RUNPATH){     // NOTE first look for DT_RUNPATH
+                if(dyn[j].d_tag == DT_RUNPATH){
                     b_is_runpath = true;
                     lib_path = strdup((char *)&dynstr[dyn[j].d_un.d_val]);
                     if(!lib_path){
