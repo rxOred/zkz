@@ -1,4 +1,4 @@
-## x86 linux debugger
+## x86-64 linux debugger
 
 - Breakpoints at memory addresses symbols and functions
 - Deleting breakpoints
@@ -9,6 +9,7 @@
 
 ## TODO
 
+- x86 support:3
 - Signal handling
 - Implement code injection (.)
 - Implement system call injection
