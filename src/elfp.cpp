@@ -59,6 +59,7 @@ int Elf::OpenElf(const char *pathname)
 
 file_failed:
     close(fd);
+
 failed:
     return -FAILED;
 }
