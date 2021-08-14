@@ -41,7 +41,7 @@ class ShellcodeNode {
 /*
  * singly linked list of shellcodes injected to the process
  */
-class ShellcodeList {
+class ShellcodeList{
     private:
         ShellcodeNode *m_head;
         ShellcodeNode *m_tail;

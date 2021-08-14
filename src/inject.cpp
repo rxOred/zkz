@@ -3,15 +3,75 @@
 #include <cstdlib>
 
 #include <cstring>
+#include <elf.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
 
 #include "log.h"
+#include "elfp.h"
 #include "inject.h"
+
+namespace Process {
+    static int pread(pid_t pid, void *dst, uint64_t start_addr, 
+            size_t len)
+    {
+        for (int i = 0; i < (len / sizeof(uint64_t)); 
+                dst+=sizeof(uint64_t), start_addr+=sizeof(uint64_t),
+                i++){
+            uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
+                    nullptr);
+            *((uint64_t *)dst) = ret;
+            (uint64_t *)dst = 8;
+        }
+    }
+
+    static uint64_t scan_process(pid_t pid, uint64_t start_addr,
+            size_t len, short key)
+    {
+        uint64_t buffer[4096/8];
+        for(int i = 0; i < (len / sizeof(uint64_t)); start_addr
+                += 8, i++){
+            result = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
+                    nullptr);
+        }
+    }
+
+}
 
 ShellcodeNode::~ShellcodeNode()
 {
     free(m_shellcode);
+}
+
+/*
+ * read a uint64_t with ptrace, check if it is 0x0
+ * if yes, continue until, len / uint64_t
+ * else break out of the loop
+ */
+
+
+uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid) 
+    const
+{
+    Elf64_Phdr *phdr = elf.GetProgramHeaderTable();
+    off_t code_vaddr = 0x0;
+    for(int i = 0; i < elf.GetNumberOfSegments(); i++){
+        if(phdr[i].p_type == PT_LOAD && phdr[i].p_flags == (PF_X |
+                    PF_W))
+            code_vaddr = phdr[i].p_vaddr;
+    }
+
+    /*
+     * scan text segment with ptrace 
+     */
+    
+}
+
+int ShellcodeNode::InjectToProcessImage(void){
+    if(m_shellcode_addr == 0x0){
+        m_shellcode_addr = FindSuitableAddress();
+        
+    }
 }
 
 ShellcodeList::~ShellcodeList()
