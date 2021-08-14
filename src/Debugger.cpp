@@ -104,6 +104,7 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address)
         log.PError("Ptrace error");
         return -1;
     }
+
     if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
         log.PError("Ptrace error");
         return -1;
@@ -126,8 +127,7 @@ int Main::RestoreBreakpoint(Breakpoint *b, uint64_t address)
     int ret = WaitForProcess();
     if(ret == EXIT_STATUS){
         return EXIT_STATUS;
-    }
-    else
+    } else
         log.Debug("process stopped or signled\n");
 
     return 0;

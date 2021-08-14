@@ -60,6 +60,36 @@ class Elf {
 
         ~Elf();
 
+        inline int GetNumberOfSections(void) const
+        {
+            return m_ehdr->e_shnum;
+        }
+
+        inline int GetNumberOfSegments(void) const
+        {
+            return m_ehdr->e_phnum;
+        }
+
+        inline Elf64_Shdr *GetSectionHeaderTable(void) const
+        {
+            return m_shdr;
+        }
+
+        inline Elf64_Phdr *GetProgramHeaderTable(void) const
+        {
+            return m_phdr;
+        }
+
+        inline void *GetMemoryMap(void) const
+        {
+            return m_mapping;
+        }
+
+        inline Elf64_Ehdr *GetElfHeader(void) const
+        {
+            return m_ehdr;
+        }
+
         void RemoveMap(void);
         int OpenElf(const char *pathname);
         int LoadFile(int fd);
