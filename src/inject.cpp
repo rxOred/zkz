@@ -138,7 +138,7 @@ int ShellcodeNode::InjectToProcessImage(Elf &elf, pid_t pid){
             goto failed;
     }
 
-    Process:pwrite(pid, m_shellcode, m_shellcode_addr, m_shellcode_len);
+    Process::pwrite(pid, m_shellcode, m_shellcode_addr, m_shellcode_len);
 failed:
     return -1;
 }
