@@ -32,7 +32,23 @@ namespace Process {
         return 0;
     }
 
-    static int pwrite();
+    static int pwrite(pid_t pid, void *src, uint64_t start_addr,
+            size_t len)
+    {
+        uint64_t *_src = (uint64_t *)src;
+        uint64_t _addr = start_addr;
+        for (int i = 0; i < (len / sizeof(uint64_t)); i++, start_addr
+                +=sizeof(uint64_t), _src+=sizeof(uint64_t)){
+            if(ptrace(PTRACE_POKETEXT, pid, _addr, _src) < 0){
+                log.PError("Ptrace error");
+                goto failed;
+            }
+        }
+        return 0;
+
+failed:
+        return -1;
+    }
 
     static uint64_t find_free_space(pid_t pid, uint64_t start_addr,
             size_t len, size_t shellcode_sz, short key)
@@ -108,7 +124,6 @@ uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid)
         }
     }
 
-
 seg_failed:
     log.Error("could not locate code segment");
 
@@ -116,14 +131,14 @@ failed:
     return 1;
 }
 
-int ShellcodeNode::InjectToProcessImage(void){
+int ShellcodeNode::InjectToProcessImage(Elf &elf, pid_t pid){
     if(m_shellcode_addr == 0x0){
-        m_shellcode_addr = FindSuitableAddress();
+        m_shellcode_addr = FindSuitableAddress(elf, pid);
         if(m_shellcode_addr == 1)
             goto failed;
     }
 
-    
+    Process:pwrite(pid, m_shellcode, m_shellcode_addr, m_shellcode_len);
 failed:
     return -1;
 }

@@ -35,7 +35,8 @@ class ShellcodeNode {
             return m_shellcode_len;
         }
 
-        int InjectToProcessImage();
+        int InjectToProcessImage(Elf &elf, pid_t pid);
+        uint64_t FindSuitableAddress(Elf &elf, pid_t pid) const;
 };
 
 /*
