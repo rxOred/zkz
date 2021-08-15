@@ -32,6 +32,8 @@ namespace Process {
         return 0;
     }
 
+    static int pwrite();
+
     static uint64_t find_free_space(pid_t pid, uint64_t start_addr,
             size_t len, size_t shellcode_sz, short key)
     {
@@ -69,7 +71,6 @@ namespace Process {
                 shellcode_sz);
         return 1;
     }
-
 }
 
 ShellcodeNode::~ShellcodeNode()
@@ -89,23 +90,42 @@ uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid)
 {
     Elf64_Phdr *phdr = elf.GetProgramHeaderTable();
     off_t code_vaddr = 0x0;
+    size_t code_sz = 0;
     for(int i = 0; i < elf.GetNumberOfSegments(); i++){
         if(phdr[i].p_type == PT_LOAD && phdr[i].p_flags == (PF_X |
-                    PF_W))
+                    PF_W)){
             code_vaddr = phdr[i].p_vaddr;
+            code_sz = phdr[i].p_memsz;
+            /*
+             * scan text segment with ptrace 
+             */
+            uint64_t address = Process::find_free_space(pid,
+                    code_vaddr, code_sz, m_shellcode_len, 0);
+            if(address == 1)
+                goto failed;
+
+            return address;
+        }
     }
 
-    /*
-     * scan text segment with ptrace 
-     */
-    
+
+seg_failed:
+    log.Error("could not locate code segment");
+
+failed:
+    return 1;
 }
 
 int ShellcodeNode::InjectToProcessImage(void){
     if(m_shellcode_addr == 0x0){
         m_shellcode_addr = FindSuitableAddress();
-        
+        if(m_shellcode_addr == 1)
+            goto failed;
     }
+
+    
+failed:
+    return -1;
 }
 
 ShellcodeList::~ShellcodeList()
