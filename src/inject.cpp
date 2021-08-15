@@ -1,7 +1,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-
 #include <cstring>
 #include <elf.h>
 #include <sys/types.h>
@@ -12,28 +11,63 @@
 #include "inject.h"
 
 namespace Process {
+    /*
+     * read len size chunk of memory from the process backing pid
+     */
     static int pread(pid_t pid, void *dst, uint64_t start_addr, 
             size_t len)
     {
-        for (int i = 0; i < (len / sizeof(uint64_t)); 
-                dst+=sizeof(uint64_t), start_addr+=sizeof(uint64_t),
-                i++){
+        uint64_t *_dst = (uint64_t *)dst;
+        for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst +=
+                sizeof(uint64_t), start_addr += sizeof(uint64_t)){
             uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
                     nullptr);
-            *((uint64_t *)dst) = ret;
-            (uint64_t *)dst = 8;
+            if(ret < 0) {
+                log.PError("Ptrace failed");
+                return -1;
+            }
+            *_dst =  ret;
         }
+
+        return 0;
     }
 
-    static uint64_t scan_process(pid_t pid, uint64_t start_addr,
-            size_t len, short key)
+    static uint64_t find_free_space(pid_t pid, uint64_t start_addr,
+            size_t len, size_t shellcode_sz, short key)
     {
-        uint64_t buffer[4096/8];
-        for(int i = 0; i < (len / sizeof(uint64_t)); start_addr
-                += 8, i++){
-            result = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
-                    nullptr);
+        uint8_t *buffer = (uint8_t*) calloc(len, sizeof(uint8_t));
+        if(buffer == nullptr){
+            log.PError("Memory allocation failed");
+            return 1;
         }
+
+        if(pread(pid, buffer, start_addr, len) < 0)
+            return 1;
+
+        uint64_t p_addr = 0x0, c_addr = 0x0;
+        size_t p_count = 0, c_count = 0;
+
+        for (size_t i = 0; i < len; i++){
+            if(buffer[i] == 0){
+                c_count++;
+                if(c_count == 0) {
+                    c_addr = start_addr + i;
+                }
+                if(c_count == shellcode_sz)
+                    return c_addr;
+            } else {
+                if(c_count > p_count){
+                    p_count = c_count;
+                    p_addr = c_addr;
+                }
+                c_count = 0;
+                c_addr = 0;
+            }
+        }
+
+        log.Print("Free space of size %d not found in the process",
+                shellcode_sz);
+        return 1;
     }
 
 }
