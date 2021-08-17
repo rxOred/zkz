@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <sched.h>
@@ -37,6 +38,16 @@ failed:
  * first read the text segment and extract it 
  * (.plt located in this segment)
  */
+
+int Reconstruct::ReadSegment(void *dst, uint64_t v_addr, size_t v_sz)
+{
+
+
+failed:
+    return -1;
+}
+
+
 int Reconstruct::ReadSegment(void *dst, uint32_t p_type, 
         uint32_t p_flags)
 {
@@ -72,9 +83,22 @@ failed:
 
 int Reconstruct::ReadTextSegment(void)
 {
-    if(ReadSegment(m_seg_text, PT_LOAD, PF_X | PF_R) < 0)
-        return -1;
-    return 0;
+    if(m_phdr == nullptr || m_ehdr == nullptr){
+        log.Error("Initialize elf header and program header table\n");
+        goto failed;
+    }
+
+    uint64_t v_addr = 0;
+    size_t v_sz = 0;
+    for(int i = 0; i < m_ehdr->e_phnum; i++){
+        if(m_phdr[i].p_type == PT_LOAD && m_phdr[i].p_flags == (PF_R |
+                    PF_X)){
+            v_addr = m_phdr[i].p_vaddr;
+            v_sz = m_phdr[i].p_memsz;
+        }
+    }
+failed:
+    return -1;
 }
 /*
  * read and extract data segment (GOT located in this segment)
@@ -87,13 +111,12 @@ int Reconstruct::ReadDataSegment(void)
 }
 
 /*
- * program header table can be used to do this task
- */
-
-/*
  * locate GOT in data segment using dynamic segment->d_tag==DT_PLTGOT
  */
 void Reconstruct::LocateGlobalOffsetTable()
 {
-
+    uint64_t got_addr = 0x0;
+    for (int i = 0; i < m_ehdr->e_phnum; i++){
+        if()
+    }
 }
