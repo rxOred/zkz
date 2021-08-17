@@ -10,83 +10,78 @@
 #include "elfp.h"
 #include "inject.h"
 
-namespace Process {
-    /*
-     * read len size chunk of memory from the process backing pid
-     */
-    static int pread(pid_t pid, void *dst, uint64_t start_addr, 
-            size_t len)
-    {
-        uint64_t *_dst = (uint64_t *)dst;
-        for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst +=
-                sizeof(uint64_t), start_addr += sizeof(uint64_t)){
-            uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
-                    nullptr);
-            if(ret < 0) {
-                log.PError("Ptrace failed");
-                return -1;
-            }
-            *_dst =  ret;
+int Process::pread(pid_t pid, void *dst, uint64_t start_addr, 
+        size_t len)
+{
+    uint64_t *_dst = (uint64_t *)dst;
+    for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst +=
+            sizeof(uint64_t), start_addr += sizeof(uint64_t)){
+        uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
+                nullptr);
+        if(ret < 0) {
+            log.PError("Ptrace failed");
+            return -1;
         }
-
-        return 0;
+        *_dst =  ret;
     }
 
-    static int pwrite(pid_t pid, void *src, uint64_t start_addr,
-            size_t len)
-    {
-        uint64_t *_src = (uint64_t *)src;
-        uint64_t _addr = start_addr;
-        for (int i = 0; i < (len / sizeof(uint64_t)); i++, start_addr
-                +=sizeof(uint64_t), _src+=sizeof(uint64_t)){
-            if(ptrace(PTRACE_POKETEXT, pid, _addr, _src) < 0){
-                log.PError("Ptrace error");
-                goto failed;
-            }
+    return 0;
+}
+
+int Process::pwrite(pid_t pid, void *src, uint64_t start_addr,
+        size_t len)
+{
+    uint64_t *_src = (uint64_t *)src;
+    uint64_t _addr = start_addr;
+    for (int i = 0; i < (len / sizeof(uint64_t)); i++, start_addr
+            +=sizeof(uint64_t), _src+=sizeof(uint64_t)){
+        if(ptrace(PTRACE_POKETEXT, pid, _addr, _src) < 0){
+            log.PError("Ptrace error");
+            goto failed;
         }
-        return 0;
+    }
+    return 0;
 
 failed:
-        return -1;
-    }
+    return -1;
+}
 
-    static uint64_t find_free_space(pid_t pid, uint64_t start_addr,
-            size_t len, size_t shellcode_sz, short key)
-    {
-        uint8_t *buffer = (uint8_t*) calloc(len, sizeof(uint8_t));
-        if(buffer == nullptr){
-            log.PError("Memory allocation failed");
-            return 1;
-        }
-
-        if(pread(pid, buffer, start_addr, len) < 0)
-            return 1;
-
-        uint64_t p_addr = 0x0, c_addr = 0x0;
-        size_t p_count = 0, c_count = 0;
-
-        for (size_t i = 0; i < len; i++){
-            if(buffer[i] == 0){
-                c_count++;
-                if(c_count == 0) {
-                    c_addr = start_addr + i;
-                }
-                if(c_count == shellcode_sz)
-                    return c_addr;
-            } else {
-                if(c_count > p_count){
-                    p_count = c_count;
-                    p_addr = c_addr;
-                }
-                c_count = 0;
-                c_addr = 0;
-            }
-        }
-
-        log.Print("Free space of size %d not found in the process",
-                shellcode_sz);
+static uint64_t find_free_space(pid_t pid, uint64_t start_addr, size_t
+        len, size_t shellcode_sz, short key)
+{
+    uint8_t *buffer = (uint8_t*) calloc(len, sizeof(uint8_t));
+    if(buffer == nullptr){
+        log.PError("Memory allocation failed");
         return 1;
     }
+
+    if(Process::pread(pid, buffer, start_addr, len) < 0)
+        return 1;
+
+    uint64_t p_addr = 0x0, c_addr = 0x0;
+    size_t p_count = 0, c_count = 0;
+
+    for (size_t i = 0; i < len; i++){
+        if(buffer[i] == 0){
+            c_count++;
+            if(c_count == 0) {
+                c_addr = start_addr + i;
+            }
+            if(c_count == shellcode_sz)
+                return c_addr;
+        } else {
+            if(c_count > p_count){
+                p_count = c_count;
+                p_addr = c_addr;
+            }
+            c_count = 0;
+            c_addr = 0;
+        }
+    }
+
+    log.Print("Free space of size %d not found in the process",
+            shellcode_sz);
+    return 1;
 }
 
 ShellcodeNode::~ShellcodeNode()
@@ -149,7 +144,7 @@ ShellcodeList::~ShellcodeList()
     m_nodes = 0;
 }
 
-int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr, 
+int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr,
         size_t shellcode_len)
 {
     void *_shellcode = calloc(shellcode_len, sizeof(uint8_t));
@@ -158,7 +153,7 @@ int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr,
 
     memcpy(_shellcode, shellcode, shellcode_len);
 
-    ShellcodeNode *node = new ShellcodeNode(_shellcode, shellcode_addr,
+    ShellcodeNode *node = new ShellcodeNode(_shellcode, shellcode_addr, 
             shellcode_len);
 
     if(m_head == nullptr)
@@ -174,18 +169,21 @@ int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr,
     return 0;
 }
 
-ShellcodeNode *ShellcodeList::GetNodeByAddress(uint64_t shellcode_addr) const
+ShellcodeNode *ShellcodeList::GetNodeByAddress(uint64_t shellcode_addr)
+    const
 {
     ShellcodeNode *cursor = m_head;
     while(cursor != nullptr){
         if(cursor->GetShellcodeAddr() == shellcode_addr){
             log.Print("Shellcode %d length found at address %x",
-                    cursor->GetShellcodeLen(), cursor->GetShellcodeAddr());
+                    cursor->GetShellcodeLen(), 
+                    cursor->GetShellcodeAddr());
             return cursor;
         }
         cursor = cursor->m_next;
     }
-    log.Print("Could not find a shellcode at address %x", shellcode_addr);
+    log.Print("Could not find a shellcode at address %x", 
+            shellcode_addr);
     return nullptr;
 }
 
@@ -196,7 +194,8 @@ int ShellcodeList::RemoveNode(uint64_t shellcode_addr)
     while(cursor != nullptr){
         if(cursor->GetShellcodeAddr() == shellcode_addr){
             log.Print("Shellcode with %d length found at address %x",
-                    cursor->GetShellcodeLen(), cursor->GetShellcodeAddr());
+                    cursor->GetShellcodeLen(), 
+                    cursor->GetShellcodeAddr());
             //remove shellcode from the process
             delete(cursor);
             if(prev != nullptr){
