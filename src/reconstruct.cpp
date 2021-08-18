@@ -1,15 +1,23 @@
+#include <fstream>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ios>
 #include <sched.h>
 #include <elf.h>
+#include <string>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
 #include "elfp.h"
 #include "log.h"
 #include "reconstruct.h"
+
+#define ADDR_SZ     16
+#define STR_SZ      64
+#define MAP_PATH    "/proc/%d/maps"
+#define MEM_PATH    "/proc/%d/mem"
 
 Reconstruct::~Reconstruct()
 {
@@ -46,33 +54,34 @@ int Reconstruct::ReadTextSegment(void)
     uint64_t v_addr = 0;
     size_t v_sz = 0;
 
-#ifdef  ELF
-    if(m_phdr == nullptr || m_ehdr == nullptr){
-        log.Error("Initialize elf header and program header table\n");
-        goto failed;
-    }
+    char proc_path[STR_SZ];
+    char addr_buf[ADDR_SZ];
+    std::string line;
 
-    for(int i = 0; i < m_ehdr->e_phnum; i++){
-        if(m_phdr[i].p_type == PT_LOAD && m_phdr[i].p_flags == (PF_R |
-                    PF_X)){
-            v_addr = m_phdr[i].p_vaddr;
-            v_sz = m_phdr[i].p_memsz;
+    sprintf(proc_path, MAP_PATH, m_pid);
+    std::ifstream proc(proc_path, std::ios::in | std::ios::binary);
+    if(proc.is_open()){
+        while(std::getline(proc, line, ' ')){
+            char prev_c = 0;
+            for(int i = 0; i < line.length(); i++){
+                if(line[i] == 'r' && line[i+1] == '-' && line[i+2] ==
+                        'x'){
+                    for(int j = 0; j < 16; j++){
+                        addr_buf[j] = line[j];
+                        std::sscanf(addr_buf, "%lx", &v_addr);
+                        if(Process::pread(m_pid, m_seg_text, v_addr, 
+                                    v_sz) < 0)
+                            goto file_failed;
+                    }
+                }
+            }
         }
-    }
-
-#else
-    char pathname[100];
-    sprintf(pathname, "/proc/%d/maps", m_pid);
-    FILE *fh = fopen(pathname, "r");
-    if(fh == nullptr){
-        log.PError("error opening proc file");
+    } else 
         goto failed;
-    }
 
+file_failed:
+    proc.close();
 
-
-#endif
-    if(Process::pread(m_pid, m_seg_text, v_addr, v_sz))
 failed:
     return -1;
 }
@@ -81,9 +90,39 @@ failed:
  */
 int Reconstruct::ReadDataSegment(void)
 {
-    if(ReadSegment(m_seg_data, PT_LOAD, PF_R | PF_W) < 0)
-        return -1;
-    return 0;
+    uint64_t v_addr = 0;
+    size_t v_sz = 0;
+
+    char proc_path[STR_SZ];
+    char addr_buf[ADDR_SZ];
+    std::string line;
+
+    sprintf(proc_path, MAP_PATH, m_pid);
+    std::ifstream proc(proc_path, std::ios::in | std::ios::binary);
+    if(proc.is_open()){
+        while(std::getline(proc, line, ' ')){
+            char prev_c = 0;
+            for(int i = 0; i < line.length(); i++){
+                if(line[i] == 'r' && line[i+1] == 'r' && line[i+2] ==
+                        '-'){
+                    for(int j = 0; j < 16; j++){
+                        addr_buf[j] = line[j];
+                        std::sscanf(addr_buf, "%lx", &v_addr);
+                        if(Process::pread(m_pid, m_seg_data, v_addr, 
+                                    v_sz) < 0)
+                            goto file_failed;
+                    }
+                }
+            }
+        }
+    } else 
+        goto failed;
+
+file_failed:
+    proc.close();
+
+failed:
+    return -1;
 }
 
 /*
