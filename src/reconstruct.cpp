@@ -1,11 +1,13 @@
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <sched.h>
 #include <elf.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
+#include "elfp.h"
 #include "log.h"
 #include "reconstruct.h"
 
@@ -39,57 +41,17 @@ failed:
  * (.plt located in this segment)
  */
 
-int Reconstruct::ReadSegment(void *dst, uint64_t v_addr, size_t v_sz)
-{
-
-
-failed:
-    return -1;
-}
-
-
-int Reconstruct::ReadSegment(void *dst, uint32_t p_type, 
-        uint32_t p_flags)
-{
-    if(m_phdr == nullptr || m_ehdr == nullptr){
-        log.Error("Initialize elf header and program header table\n");
-        goto failed;
-    }
-
-    for(int i = 0; i < m_ehdr->e_phnum; i++){
-        if(m_phdr[i].p_type == p_type && m_phdr[i].p_flags == p_flags){
-            dst = calloc(sizeof(uint8_t), m_phdr[i].p_filesz);
-            if((uint8_t *)dst == nullptr){
-                log.PError("Error allocating memory");
-                goto failed;
-            }
-
-            if(memcpy((uint8_t *)dst, &m_mapping[m_phdr[i].p_offset], 
-                    m_phdr[i].p_filesz) == nullptr){
-                log.PError("Error copying data");
-                goto mem_failed;
-            }
-        }
-    }
-
-    return 0;
-
-mem_failed:
-    free(dst);
-
-failed:
-    return -1;
-}
-
 int Reconstruct::ReadTextSegment(void)
 {
+    uint64_t v_addr = 0;
+    size_t v_sz = 0;
+
+#ifdef  ELF
     if(m_phdr == nullptr || m_ehdr == nullptr){
         log.Error("Initialize elf header and program header table\n");
         goto failed;
     }
 
-    uint64_t v_addr = 0;
-    size_t v_sz = 0;
     for(int i = 0; i < m_ehdr->e_phnum; i++){
         if(m_phdr[i].p_type == PT_LOAD && m_phdr[i].p_flags == (PF_R |
                     PF_X)){
@@ -97,6 +59,20 @@ int Reconstruct::ReadTextSegment(void)
             v_sz = m_phdr[i].p_memsz;
         }
     }
+
+#else
+    char pathname[100];
+    sprintf(pathname, "/proc/%d/maps", m_pid);
+    FILE *fh = fopen(pathname, "r");
+    if(fh == nullptr){
+        log.PError("error opening proc file");
+        goto failed;
+    }
+
+
+
+#endif
+    if(Process::pread(m_pid, m_seg_text, v_addr, v_sz))
 failed:
     return -1;
 }
