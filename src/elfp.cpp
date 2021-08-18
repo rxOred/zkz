@@ -1,4 +1,5 @@
 #include <bits/stdint-uintn.h>
+#include <cstddef>
 #include <elf.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -16,7 +17,36 @@
 #include <sys/ptrace.h>
 #include <sys/mman.h>
 
-#define FAILED 1
+#define FAILED      1
+#define STR_SZ      64
+#define ADDR_SZ     16
+#define MAP_PATH    "/proc/%d/maps"
+
+Segdata *Process::get_segment_data(char *permission_str, pid_t 
+        pid)
+{
+    Segdata *seg = new Segdata;
+    std::string line;
+    /* dont wanna waste stack lol.. just kidding */
+    char *proc_path = (char *)calloc(sizeof(char), STR_SZ);
+    if(proc_path == nullptr){
+        log.PError("Memory allocation error");
+        goto failed;
+    }
+
+    char *addr_buf = (char *)calloc(sizeof(char), ADDR_SZ);
+    if(addr_buf == nullptr){
+        log.PError("Memory allocation error");
+        goto m_failed;
+    }
+
+    sprintf(proc_path, MAP_PATH, pid);
+m_failed:
+    free(proc_path);
+
+failed:
+    return seg;
+}
 
 int Process::pread(pid_t pid, void *dst, uint64_t start_addr, 
         size_t len)

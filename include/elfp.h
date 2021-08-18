@@ -1,8 +1,10 @@
 #ifndef ELF_H
 #define ELF_H
 
+#include <cstddef>
 #include <elf.h>
 #include <bits/stdint-uintn.h>
+#include <fcntl.h>
 #include <vector>
 #include <iostream>
 #include <cstring>
@@ -10,18 +12,23 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+typedef struct {
+    uint64_t m_addr;
+    size_t m_size;
+}Segdata;
+
 namespace Process {
     /*
      * read len size chunk of memory from the process backing pid
      */
     int pread(pid_t pid, void *dst, uint64_t start_addr, size_t
             len);
-
     /* 
      * write len size chunk of memory to process backing pid
      */
     int pwrite(pid_t pid, void *src, uint64_t start_addr, size_t
             len);
+    Segdata *get_segment_data(char *permission_str, pid_t pid);
     uint64_t find_free_space(pid_t pid, uint64_t start_addr, 
             size_t len, size_t shellcode_sz, short key);
 }
