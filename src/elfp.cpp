@@ -13,9 +13,85 @@
 #include "elfp.h"
 #include "log.h"
 
+#include <sys/ptrace.h>
 #include <sys/mman.h>
 
 #define FAILED 1
+
+int Process::pread(pid_t pid, void *dst, uint64_t start_addr, 
+        size_t len)
+{
+    uint64_t *_dst = (uint64_t *)dst;
+    for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst +=
+            sizeof(uint64_t), start_addr += sizeof(uint64_t)){
+        uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
+                nullptr);
+        if(ret < 0) {
+            log.PError("Ptrace failed");
+            return -1;
+        }
+        *_dst =  ret;
+    }
+
+    return 0;
+}
+
+int Process::pwrite(pid_t pid, void *src, uint64_t start_addr,
+        size_t len)
+{
+    uint64_t *_src = (uint64_t *)src;
+    uint64_t _addr = start_addr;
+    for (int i = 0; i < (len / sizeof(uint64_t)); i++, start_addr
+            +=sizeof(uint64_t), _src+=sizeof(uint64_t)){
+        if(ptrace(PTRACE_POKETEXT, pid, _addr, _src) < 0){
+            log.PError("Ptrace error");
+            goto failed;
+        }
+    }
+    return 0;
+
+failed:
+    return -1;
+}
+
+uint64_t Process::find_free_space(pid_t pid, uint64_t start_addr, size_t
+        len, size_t shellcode_sz, short key)
+{
+    uint8_t *buffer = (uint8_t*) calloc(len, sizeof(uint8_t));
+    if(buffer == nullptr){
+        log.PError("Memory allocation failed");
+        return 1;
+    }
+
+    if(Process::pread(pid, buffer, start_addr, len) < 0)
+        return 1;
+
+    uint64_t p_addr = 0x0, c_addr = 0x0;
+    size_t p_count = 0, c_count = 0;
+
+    for (size_t i = 0; i < len; i++){
+        if(buffer[i] == 0){
+            c_count++;
+            if(c_count == 0) {
+                c_addr = start_addr + i;
+            }
+            if(c_count == shellcode_sz)
+                return c_addr;
+        } else {
+            if(c_count > p_count){
+                p_count = c_count;
+                p_addr = c_addr;
+            }
+            c_count = 0;
+            c_addr = 0;
+        }
+    }
+
+    log.Print("Free space of size %d not found in the process",
+            shellcode_sz);
+    return 1;
+}
+
 
 inline void Elf::RemoveMap(void)
 {

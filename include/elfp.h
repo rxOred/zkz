@@ -10,6 +10,22 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+namespace Process {
+    /*
+     * read len size chunk of memory from the process backing pid
+     */
+    int pread(pid_t pid, void *dst, uint64_t start_addr, size_t
+            len);
+
+    /* 
+     * write len size chunk of memory to process backing pid
+     */
+    int pwrite(pid_t pid, void *src, uint64_t start_addr, size_t
+            len);
+    uint64_t find_free_space(pid_t pid, uint64_t start_addr, 
+            size_t len, size_t shellcode_sz, short key);
+}
+
 typedef struct {
     uint64_t m_address;
     char *m_symbol;
