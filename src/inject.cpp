@@ -21,7 +21,6 @@ ShellcodeNode::~ShellcodeNode()
  * else break out of the loop
  */
 
-
 uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid) const
 {
     uint64_t address = 1;

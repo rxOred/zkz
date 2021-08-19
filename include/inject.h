@@ -10,7 +10,7 @@
 /*
  * NOTE zkz just injects whatever user send in to debugee's memory space.
  * it does not perform run-time reloactions. hell it does not even set rip
- * . so you have to do that ~\()/~. but there will be commands to that.
+ * so you have to do that ~\()/~. but there will be commands to that.
  */
 
 /* 
