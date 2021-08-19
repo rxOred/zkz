@@ -1,3 +1,4 @@
+#include <fstream>
 #include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <elf.h>
@@ -22,29 +23,46 @@
 #define ADDR_SZ     16
 #define MAP_PATH    "/proc/%d/maps"
 
-Segdata *Process::get_segment_data(char *permission_str, pid_t 
-        pid)
+Segdata *Process::get_segment_data(const char *permission_str,
+        pid_t pid)
 {
-    Segdata *seg = new Segdata;
+    Segdata *seg = new Segdata; 
     std::string line;
     /* dont wanna waste stack lol.. just kidding */
-    char *proc_path = (char *)calloc(sizeof(char), STR_SZ);
-    if(proc_path == nullptr){
-        log.PError("Memory allocation error");
-        goto failed;
-    }
-
-    char *addr_buf = (char *)calloc(sizeof(char), ADDR_SZ);
-    if(addr_buf == nullptr){
-        log.PError("Memory allocation error");
-        goto m_failed;
-    }
+    char proc_path[STR_SZ];
+    char addr_buf[ADDR_SZ];
+    char endaddr_buf[ADDR_SZ];
 
     sprintf(proc_path, MAP_PATH, pid);
-m_failed:
-    free(proc_path);
+    std::ifstream proc(proc_path, std::ios::in | std::ios::binary);
+    if(proc.is_open()){
+        while(std::getline(proc, line, ' ')){
+            char prev_c = 0;
+            for(int i = 0; i < line.length(); i++){
+                if(line[i] == permission_str[i] && line[i+1] ==
+                        permission_str[i+1] && line[i+2] == 
+                        permission_str[i+2]){
+                    int j;
+                    uint64_t endaddr;
+                    for(j = 0; line[j] != '-'; j++){
+                        addr_buf[j] = line[j];
+                    }
+                    for(int k = 0; line[j] != ' '; k++, j++){
+                        endaddr_buf[k] = line[j];
+                    }
+                    std::sscanf(addr_buf, "%lx", &seg->m_addr);
+                    std::sscanf(endaddr_buf, "%lx", &endaddr);
+                    seg->m_size = endaddr - seg->m_addr;
+                    goto ret;
+                }
+                log.Error("Unable to locate a memory segment with \
+                        given permissions");
+            }
+        }
+    } else 
+        goto ret;
 
-failed:
+ret:
     return seg;
 }
 

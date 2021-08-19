@@ -12,10 +12,17 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-typedef struct {
+typedef struct _segdata Segdata;
+
+struct _segdata{
     uint64_t m_addr;
     size_t m_size;
-}Segdata;
+
+    _segdata(void){
+        m_addr = 0;
+        m_size = 0;
+    }
+};
 
 namespace Process {
     /*
@@ -28,7 +35,8 @@ namespace Process {
      */
     int pwrite(pid_t pid, void *src, uint64_t start_addr, size_t
             len);
-    Segdata *get_segment_data(char *permission_str, pid_t pid);
+    Segdata *get_segment_data(const char *permission_str, pid_t
+            pid);
     uint64_t find_free_space(pid_t pid, uint64_t start_addr, 
             size_t len, size_t shellcode_sz, short key);
 }
@@ -77,8 +85,9 @@ class Elf {
 
     public:
         Elf(const char *pathname, uint64_t base_addr)
-            : m_size(0), m_pathname(pathname), m_base_addr(base_addr), m_ehdr(nullptr)
-            , m_phdr(nullptr), m_shdr(nullptr), m_mapping(nullptr)
+            : m_size(0), m_pathname(pathname), m_base_addr(base_addr)
+              , m_ehdr(nullptr), m_phdr(nullptr), m_shdr(nullptr),
+              m_mapping(nullptr)
         {}
 
         ~Elf();
