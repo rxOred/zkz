@@ -57,8 +57,8 @@ int BreakpointList::GetNoOfBreakpoints() const
 /* add breakpoint to B_List */
 void BreakpointList::AppendElement(uint64_t address, uint64_t origdata)
 {
-    Breakpoint *b = new Breakpoint{address, origdata, 
-        GetNoOfBreakpoints() + 1, true};
+    Breakpoint *b = new Breakpoint{address, origdata, GetNoOfBreakpoints()
+        + 1, true};
     b->EnableBreakpoint();
 
     B_List.push_back(b);  

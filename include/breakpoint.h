@@ -29,7 +29,8 @@ class Breakpoint{
         int m_breakpoint_number;
 
         Breakpoint();
-        Breakpoint(uint64_t address, uint64_t origdata, int breakpoint_number, bool is_enabled);
+        Breakpoint(uint64_t address, uint64_t origdata, int breakpoint_number, bool
+                is_enabled);
         bool GetState(void) const;
         void DisableBreakpoint(void);
         void EnableBreakpoint(void);
