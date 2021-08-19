@@ -1,4 +1,6 @@
+#include <fstream>
 #include <bits/stdint-uintn.h>
+#include <cstddef>
 #include <elf.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -16,16 +18,65 @@
 #include <sys/ptrace.h>
 #include <sys/mman.h>
 
-#define FAILED 1
+#define FAILED      1
+#define STR_SZ      64
+#define ADDR_SZ     16
+#define MAP_PATH    "/proc/%d/maps"
+
+/* process namespace */
+Segdata *Process::get_segment_data(const char *permission_str, pid_t pid)
+{
+    std::string line;
+    /* dont wanna waste stack lol.. just kidding */
+    char proc_path[STR_SZ];
+    char addr_buf[ADDR_SZ];
+    char endaddr_buf[ADDR_SZ];
+    sprintf(proc_path, MAP_PATH, pid);
+    std::ifstream proc;
+    Segdata *seg = (Segdata *)calloc(1, sizeof(Segdata));
+    if(seg == nullptr){
+        log.PError("Memory allocation error");
+        goto ret;
+    }
+
+    proc.open(proc_path, std::ios::in | std::ios::binary);
+    if(proc.is_open()){
+        while(std::getline(proc, line, ' ')){
+            char prev_c = 0;
+            for(int i = 0; i < line.length(); i++){
+                if(line[i] == permission_str[i] && line[i+1] == permission_str[i+1]
+                        && line[i+2] == permission_str[i+2]){
+                    int j;
+                    uint64_t endaddr;
+                    for(j = 0; line[j] != '-'; j++){
+                        addr_buf[j] = line[j];
+                    }
+                    for(int k = 0; line[j] != ' '; k++, j++){
+                        endaddr_buf[k] = line[j];
+                    }
+                    std::sscanf(addr_buf, "%lx", &seg->m_addr);
+                    std::sscanf(endaddr_buf, "%lx", &endaddr);
+                    seg->m_size = endaddr - seg->m_addr;
+                    goto ret;
+                }
+                log.Error("Unable to locate a memory segment with given     \
+                        permissions");
+            }
+        }
+    } else 
+        goto ret;
+
+ret:
+    return seg;
+}
 
 int Process::pread(pid_t pid, void *dst, uint64_t start_addr, 
         size_t len)
 {
     uint64_t *_dst = (uint64_t *)dst;
-    for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst +=
-            sizeof(uint64_t), start_addr += sizeof(uint64_t)){
-        uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr,
-                nullptr);
+    for(int i = 0; i < (len / sizeof(uint64_t)); i++, _dst += sizeof(uint64_t), 
+            start_addr += sizeof(uint64_t)){
+        uint64_t ret = ptrace(PTRACE_PEEKTEXT, pid, start_addr, nullptr);
         if(ret < 0) {
             log.PError("Ptrace failed");
             return -1;
@@ -92,7 +143,7 @@ uint64_t Process::find_free_space(pid_t pid, uint64_t start_addr, size_t
     return 1;
 }
 
-
+/* class elf */
 inline void Elf::RemoveMap(void)
 {
     if(m_mapping != nullptr){

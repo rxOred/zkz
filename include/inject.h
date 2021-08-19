@@ -7,6 +7,12 @@
 
 #include "elfp.h"
 
+/*
+ * NOTE zkz just injects whatever user send in to debugee's memory space.
+ * it does not perform run-time reloactions. hell it does not even set rip
+ * so you have to do that ~\()/~. but there will be commands to that.
+ */
+
 /* 
  * node that holds shellcode, length and injected address
  */
@@ -18,8 +24,8 @@ class ShellcodeNode {
 
     public:
         ShellcodeNode *m_next;
-        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, 
-                size_t shellcode_len)
+        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, size_t 
+                shellcode_len)
             : m_shellcode(shellcode), m_shellcode_addr(shellcode_addr), 
             m_shellcode_len(shellcode_len), m_next(nullptr)
         {}
@@ -54,7 +60,7 @@ class ShellcodeList{
         {}
 
         ~ShellcodeList();
-        int AppendNode(void *shellcode, uint64_t shellcode_addr, size_t
+        int AppendNode(void *shellcode, uint64_t shellcode_addr, size_t 
                 shellcode_len);
         ShellcodeNode *GetNodeByAddress(uint64_t shellcode_addr) const;
         int RemoveNode(uint64_t shellcode_addr);

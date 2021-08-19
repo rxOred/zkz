@@ -8,7 +8,8 @@
 #include <vector>
 
 /* 
- * NOTE each of these represent a line and its corresponding address, compilation_unit 
+ * NOTE each of these represent a line and its corresponding address, compilation
+ * _unit 
  */
 class Lineinfo{
     public:
@@ -24,7 +25,8 @@ class Lineinfo{
  */
 
 /* 
- * NOTE if init_debug_lines fails, user should not be able to use select && other related commands 
+ * NOTE if init_debug_lines fails, user should not be able to use select && 
+ * other related commands 
  */
 
 class DebugLineInfo{

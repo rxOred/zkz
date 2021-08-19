@@ -1,15 +1,22 @@
+#include <fstream>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ios>
 #include <sched.h>
 #include <elf.h>
+#include <string>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
 #include "elfp.h"
 #include "log.h"
 #include "reconstruct.h"
+
+/*
+ * reconstruct elf ET_DYN binaries
+ */
 
 Reconstruct::~Reconstruct()
 {
@@ -33,46 +40,22 @@ failed:
 }
 
 /*
- * reconstruct damaged/stripped dynamically linked binary files
- */
-
-/*
  * first read the text segment and extract it 
  * (.plt located in this segment)
  */
 
 int Reconstruct::ReadTextSegment(void)
 {
-    uint64_t v_addr = 0;
-    size_t v_sz = 0;
+    Segdata *seg = Process::get_segment_data("r-x", m_pid);
+    if(seg == nullptr) goto failed;
 
-#ifdef  ELF
-    if(m_phdr == nullptr || m_ehdr == nullptr){
-        log.Error("Initialize elf header and program header table\n");
-        goto failed;
+    if(Process::pread(m_pid, m_seg_text, seg->m_addr, seg->m_size) < 0){
+        goto m_failed;
     }
 
-    for(int i = 0; i < m_ehdr->e_phnum; i++){
-        if(m_phdr[i].p_type == PT_LOAD && m_phdr[i].p_flags == (PF_R |
-                    PF_X)){
-            v_addr = m_phdr[i].p_vaddr;
-            v_sz = m_phdr[i].p_memsz;
-        }
-    }
+m_failed:
+    free(seg);
 
-#else
-    char pathname[100];
-    sprintf(pathname, "/proc/%d/maps", m_pid);
-    FILE *fh = fopen(pathname, "r");
-    if(fh == nullptr){
-        log.PError("error opening proc file");
-        goto failed;
-    }
-
-
-
-#endif
-    if(Process::pread(m_pid, m_seg_text, v_addr, v_sz))
 failed:
     return -1;
 }
@@ -81,14 +64,23 @@ failed:
  */
 int Reconstruct::ReadDataSegment(void)
 {
-    if(ReadSegment(m_seg_data, PT_LOAD, PF_R | PF_W) < 0)
-        return -1;
-    return 0;
+    Segdata *seg = Process::get_segment_data("rw-", m_pid);
+    if(seg == nullptr) goto failed;
+
+    if(Process::pread(m_pid, m_seg_data, seg->m_addr, seg->m_size) < 0)
+        goto m_failed;
+
+m_failed:
+    free(seg);
+
+failed:
+    return -1;
 }
 
 /*
  * locate GOT in data segment using dynamic segment->d_tag==DT_PLTGOT
  */
+#ifdef LOC
 void Reconstruct::LocateGlobalOffsetTable()
 {
     uint64_t got_addr = 0x0;
@@ -96,3 +88,4 @@ void Reconstruct::LocateGlobalOffsetTable()
         if()
     }
 }
+#endif

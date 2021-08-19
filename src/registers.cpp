@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs){
-
+int InfoRegistersAll(Debug& debug, struct user_regs_struct& regs)
+{
    if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, &regs) < 0){
 
        perror("[X] Ptrace error");
@@ -79,9 +79,8 @@ struct reg{
     void (*set_handler)(struct user_regs_struct&, uint64_t);
 };
 
-int InfoRegister(Debug& debug, struct user_regs_struct& regs, 
-        std::string reg){
-
+int InfoRegister(Debug& debug, struct user_regs_struct& regs, std::string reg)
+{
     if(ptrace(PTRACE_GETREGS, debug.GetPid(), nullptr, &regs) < 0) {
 
         log.PError("Ptrace failed");
