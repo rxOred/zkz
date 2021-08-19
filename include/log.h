@@ -7,13 +7,13 @@
 #include <cstdarg>
 #include <cstring>
 
-#define PRINT (1 << 0)
-#define ERROR (1 << 1)
-#define PERROR (1 << 2)
-#define WARN (1 << 3)
-#define INFO (1 << 4)
-#define DEBUG (1 << 5)
-#define PROMPT (1 << 6)
+#define PRINT       (1 << 0)
+#define ERROR       (1 << 1)
+#define PERROR      (1 << 2)
+#define WARN        (1 << 3)
+#define INFO        (1 << 4)
+#define DEBUG       (1 << 5)
+#define PROMPT      (1 << 6)
 
 class Log {
 
