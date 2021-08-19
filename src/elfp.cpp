@@ -59,7 +59,8 @@ Segdata *Process::get_segment_data(const char *permission_str, pid_t pid)
                     seg->m_size = endaddr - seg->m_addr;
                     goto ret;
                 }
-                log.Error("Unable to locate a memory segment with given permissions");
+                log.Error("Unable to locate a memory segment with given     \
+                        permissions");
             }
         }
     } else 

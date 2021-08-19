@@ -14,10 +14,9 @@
 #include "log.h"
 #include "reconstruct.h"
 
-#define ADDR_SZ     16
-#define STR_SZ      64
-#define MAP_PATH    "/proc/%d/maps"
-#define MEM_PATH    "/proc/%d/mem"
+/*
+ * reconstruct elf ET_DYN binaries
+ */
 
 Reconstruct::~Reconstruct()
 {
@@ -50,6 +49,13 @@ int Reconstruct::ReadTextSegment(void)
     Segdata *seg = Process::get_segment_data("r-x", m_pid);
     if(seg == nullptr) goto failed;
 
+    if(Process::pread(m_pid, m_seg_text, seg->m_addr, seg->m_size) < 0){
+        goto m_failed;
+    }
+
+m_failed:
+    free(seg);
+
 failed:
     return -1;
 }
@@ -61,6 +67,12 @@ int Reconstruct::ReadDataSegment(void)
     Segdata *seg = Process::get_segment_data("rw-", m_pid);
     if(seg == nullptr) goto failed;
 
+    if(Process::pread(m_pid, m_seg_data, seg->m_addr, seg->m_size) < 0)
+        goto m_failed;
+
+m_failed:
+    free(seg);
+
 failed:
     return -1;
 }
@@ -68,6 +80,7 @@ failed:
 /*
  * locate GOT in data segment using dynamic segment->d_tag==DT_PLTGOT
  */
+#ifdef LOC
 void Reconstruct::LocateGlobalOffsetTable()
 {
     uint64_t got_addr = 0x0;
@@ -75,3 +88,4 @@ void Reconstruct::LocateGlobalOffsetTable()
         if()
     }
 }
+#endif
