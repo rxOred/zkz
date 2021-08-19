@@ -22,36 +22,27 @@ ShellcodeNode::~ShellcodeNode()
  */
 
 
-uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid) 
-    const
+uint64_t ShellcodeNode::FindSuitableAddress(Elf &elf, pid_t pid) const
 {
-    Elf64_Phdr *phdr = elf.GetProgramHeaderTable();
-    off_t code_vaddr = 0x0;
-    size_t code_sz = 0;
-    for(int i = 0; i < elf.GetNumberOfSegments(); i++){
-        if(phdr[i].p_type == PT_LOAD && phdr[i].p_flags == (PF_X |
-                    PF_W)){
-            code_vaddr = phdr[i].p_vaddr;
-            code_sz = phdr[i].p_memsz;
-            /*
-             * scan text segment with ptrace 
-             */
-            uint64_t address = Process::find_free_space(pid,
-                    code_vaddr, code_sz, m_shellcode_len, 0);
-            if(address == 1)
-                goto failed;
+    uint64_t address = 1;
+    Segdata *seg = Process::get_segment_data("r-x", pid);
+    if(seg == nullptr) goto ret;
 
-            return address;
-        }
-    }
-
-seg_failed:
-    log.Error("could not locate code segment");
+    address = Process::find_free_space(pid, seg->m_addr, seg->m_size, 
+            m_shellcode_len, 0);
+    if(address == 1) goto failed;
 
 failed:
-    return 1;
+    free(seg);
+
+ret:
+    return address;
 }
 
+/*
+ * NOTE probably inject code into anywhere exec in memory by saving original 
+ * content in a buffer. then set rip.. may be this can be another feature
+ */
 int ShellcodeNode::InjectToProcessImage(Elf &elf, pid_t pid){
     if(m_shellcode_addr == 0x0){
         m_shellcode_addr = FindSuitableAddress(elf, pid);
@@ -70,8 +61,8 @@ ShellcodeList::~ShellcodeList()
     m_nodes = 0;
 }
 
-int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr,
-        size_t shellcode_len)
+int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr, size_t
+        shellcode_len)
 {
     void *_shellcode = calloc(shellcode_len, sizeof(uint8_t));
     if(_shellcode == nullptr)
@@ -95,21 +86,20 @@ int ShellcodeList::AppendNode(void *shellcode, uint64_t shellcode_addr,
     return 0;
 }
 
-ShellcodeNode *ShellcodeList::GetNodeByAddress(uint64_t shellcode_addr)
-    const
+ShellcodeNode *ShellcodeList::GetNodeByAddress(uint64_t shellcode_addr) const
 {
     ShellcodeNode *cursor = m_head;
     while(cursor != nullptr){
         if(cursor->GetShellcodeAddr() == shellcode_addr){
-            log.Print("Shellcode %d length found at address %x",
-                    cursor->GetShellcodeLen(), 
-                    cursor->GetShellcodeAddr());
+            log.Print("Shellcode %d length found at address %x",cursor->
+                    GetShellcodeLen(), cursor->GetShellcodeAddr());
             return cursor;
         }
         cursor = cursor->m_next;
     }
     log.Print("Could not find a shellcode at address %x", 
             shellcode_addr);
+
     return nullptr;
 }
 
@@ -119,9 +109,8 @@ int ShellcodeList::RemoveNode(uint64_t shellcode_addr)
     ShellcodeNode *prev = nullptr;
     while(cursor != nullptr){
         if(cursor->GetShellcodeAddr() == shellcode_addr){
-            log.Print("Shellcode with %d length found at address %x",
-                    cursor->GetShellcodeLen(), 
-                    cursor->GetShellcodeAddr());
+            log.Print("Shellcode with %d length found at address %x",cursor->
+                    GetShellcodeLen(), cursor->GetShellcodeAddr());
             //remove shellcode from the process
             delete(cursor);
             if(prev != nullptr){
