@@ -47,6 +47,9 @@ failed:
 
 int Reconstruct::ReadTextSegment(void)
 {
+    Segdata *seg = Process::get_segment_data("r-x", m_pid);
+    if(seg == nullptr) goto failed;
+
 failed:
     return -1;
 }
@@ -55,8 +58,9 @@ failed:
  */
 int Reconstruct::ReadDataSegment(void)
 {
-    Segdata *seg = Process::get_segment_data("rw-", m_pid)
-    if(seg == nullptr)
+    Segdata *seg = Process::get_segment_data("rw-", m_pid);
+    if(seg == nullptr) goto failed;
+
 failed:
     return -1;
 }
