@@ -8,8 +8,7 @@
 #include <vector>
 
 /* 
- * NOTE each of these represent a line and its corresponding address, compilation
- * _unit 
+ * NOTE each of these represent a line and its corresponding address, compilation_unit 
  */
 class Lineinfo{
     public:
@@ -25,8 +24,8 @@ class Lineinfo{
  */
 
 /* 
- * NOTE if init_debug_lines fails, user should not be able to use select && 
- * other related commands 
+ * NOTE if init_debug_lines fails, user should not be able to use select && other
+ * related commands 
  */
 
 class DebugLineInfo{
@@ -41,9 +40,9 @@ class DebugLineInfo{
 
         ~DebugLineInfo();
 
-        inline void AppendElement(int line_number, uint64_t address, 
-                int unit_number){
-
+        inline void AppendElement(int line_number, uint64_t address, int 
+                unit_number)
+        {
             Lineinfo *l = new Lineinfo(line_number, address, unit_number);
             D_lines.push_back(l);
         }

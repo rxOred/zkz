@@ -9,7 +9,8 @@
 class Breakpoint{
 
     private:
-        /* NOTE no stop at breakpoint if this is false, it will restore breakpoint 
+        /* 
+         * NOTE no stop at breakpoint if this is false, it will restore breakpoint 
          * instruction to its original instruction and continue execution 
          */
         bool b_is_enabled;
