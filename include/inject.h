@@ -24,8 +24,7 @@ class ShellcodeNode {
 
     public:
         ShellcodeNode *m_next;
-        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, size_t 
-                shellcode_len)
+        ShellcodeNode(void *shellcode, uint64_t shellcode_addr, size_t shellcode_len)
             : m_shellcode(shellcode), m_shellcode_addr(shellcode_addr), 
             m_shellcode_len(shellcode_len), m_next(nullptr)
         {}

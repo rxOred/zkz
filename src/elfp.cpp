@@ -193,7 +193,8 @@ failed:
 
 int Elf::LoadFile(int fd)
 {
-    m_mapping = (uint8_t *)mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    m_mapping = (uint8_t *)mmap(nullptr, m_size, PROT_READ | PROT_WRITE,
+            MAP_PRIVATE, fd, 0);
     if(m_mapping == (uint8_t *) MAP_FAILED){
         log.PError("Memory map failed");
         goto failed;
