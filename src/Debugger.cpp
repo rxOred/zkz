@@ -1231,8 +1231,8 @@ int Main::ParseArguments(int argc, char **argv)
 #ifdef DEBUG
         std::cout << results["file"].as<std::string>() << std::endl;
 #endif
-        char **path = parse_string(results["file"].as<std::string>()
-                .c_str());
+        char **path = parse_string((char *)results["file"].as<std::
+                string>().c_str());
         if(path == nullptr)
             goto failed;
 

@@ -35,7 +35,7 @@ class Main{
         {}
 
         ~Main();
-        void ParseArguments(int argc, char *argv[]);
+        int ParseArguments(int argc, char *argv[]);
         int Debugger(void);
 
         /*
