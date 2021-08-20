@@ -1082,8 +1082,6 @@ uint64_t Main::GetBaseAddress(pid_t pid) const
     uint64_t base_addr = 0;
     char proc_path[64];
     char addr_buf[16];
-    char *p = addr_buf;
-
     sprintf(proc_path, "/proc/%d/maps", pid);
 
     FILE *fh = fopen(proc_path, "r");
@@ -1092,9 +1090,9 @@ uint64_t Main::GetBaseAddress(pid_t pid) const
         goto failed;
     }
 
-    for(int i = 0; i < 16; i++, p++){
-        *addr_buf = fgetc(fh);
-        if(!std::isalnum(*addr_buf))
+    for(int i = 0; i < 16; i++){
+        addr_buf[i] = fgetc(fh);
+        if(!std::isalnum(addr_buf[i]))
             goto char_failed;
     }
 
@@ -1164,68 +1162,93 @@ int Main::AttachProcess(void)
     return -1;
 }
 
-void Main::ParseArguments(int argc, char *argv[])
+#include <cxxopts.hpp>
+
+char **parse_string(char *s)
 {
-    char **pathname = nullptr;
-    for(int i = 1; i < argc; i++){
-        if (strcmp(argv[i], "-f") == 0){
-            int j, count = 0;
-            i++;
-            for(j = i; j < argc; j++){
-                if(argv[j][0] == '-') break;
-                pathname = (char **)realloc(pathname, sizeof(char **) * (count + 2));
-                if(!pathname){
-                    log.PError("Memory allocation error");
-                    goto failed;
-                }
-                pathname[count] = argv[j];
-                count++;
-            }
-
-            pathname[count] = nullptr;
-            m_debug.SetPathname(pathname);
-            m_debug.SetCount(count);
-            i = j - 1;
-        }
-        else if(strcmp(argv[i], "-p") == 0){
-            i++;
-            if(!argv[i] || i == argc) {
-                log.Error("Expected a process id\n");
-                /* 
-                 * user have to specify a process id 
-                 */
-                goto failed;
-            }
-            else m_debug.SetPid(atoi(argv[i]));
-        }
-        else if(strcmp(argv[i], "-s") == 0){
-            i++;
-            if(i == argc || !argv[i])
-                goto failed;
-
-            if(atoi(argv[i]) > 0)
-                m_debug.SetSystrace();
+    int count = 1;
+    char **pathname = (char **)malloc(sizeof(char *) * count);
+    char *str = nullptr;
+    if(pathname == nullptr){
+        log.PError("Memory allocation failed");
+        goto failed;
+    }
+    str = strtok(s, " ");
+    pathname[0] = strdup(str);
+    if(pathname[0] == nullptr){
+        log.PError("Memory allocation error");
+        goto m_failed;
+    }
+    while(str != nullptr){
+        count++;
+        pathname = (char **) realloc(pathname, sizeof(char *) * 
+                count);
+        if(pathname == nullptr){
+            goto m_failed;
         }
 
-        else if(strcmp(argv[i], "-i") == 0){
-
-            i++;
-            if(i == argc || !argv[i])
-                goto failed;
-
-            if(atoi(argv[i]) > 0)
-                m_debug.SetInforeg();
+        str = strtok(nullptr, " ");
+        pathname[count - 1] = strdup(str);
+        if(pathname[count - 1] == nullptr){
+            log.PError("Memory allocation failed");
+            goto m_failed;
         }
-        else
-            goto failed;
     }
 
-failed:
+m_failed:
+    if(count >= 1){
+        for(int i = 0; i < count; i++)
+            if(pathname[i])
+                free(pathname[i]);
+    }
     if(pathname)
         free(pathname);
 
-    PrintUsage();
-    exit(EXIT_FAILURE);
+failed:
+    return nullptr;
+}
+
+int Main::ParseArguments(int argc, char **argv)
+{
+    cxxopts::Options options("zkz", "x86-64 linux debugger");
+    options.add_options()
+        ("f, file", "filename", cxxopts::value<std::string>())
+        ("p, pid", "process id", cxxopts::value<int>())
+        ("s, systrace", "system call tracer")
+        ("i, inforeg", "info registers")
+        ("h, help", "print help")
+        ;
+
+    auto results = options.parse(argc, argv);
+
+    std::cout << "parsing" << std::endl;
+    if(results.count("help")){
+        PrintUsage();
+        exit(0);
+    }
+
+    if(results.count("file") == 1){
+#ifdef DEBUG
+        std::cout << results["file"].as<std::string>() << std::endl;
+#endif
+        char **path = parse_string(results["file"].as<std::string>()
+                .c_str());
+        if(path == nullptr)
+            goto failed;
+
+    } else if(results.count("pid") == 1) {
+        m_debug.SetPid(results["pid"].as<int>());
+    }
+
+    if(results.count("s")){
+        m_debug.SetSystrace();
+    }
+    if(results.count("i")){
+        m_debug.SetInforeg();
+    }
+
+failed:
+    return -1;
 }
 
 int Main::Debugger(void)
