@@ -18,24 +18,27 @@
 class Log {
 
     public:
-        void SetState(uint8_t state) {
+        void SetState(uint8_t state) 
+        {
             m_state = state;
         }
 
-        uint8_t CheckState(uint8_t state) { 
+        uint8_t CheckState(uint8_t state) 
+        { 
             return (m_state & state);
         }
 
-        Log(){
-
+        Log()
+        {
             m_state = PRINT | ERROR | PERROR;
         }
-        Log(uint8_t state){
-
+        Log(uint8_t state)
+        {
             m_state = state;
         }
 
-        void Print(const char *msg, ...) {
+        void Print(const char *msg, ...) 
+        {
             if(CheckState(PRINT)){
 
                 va_list arg;
@@ -86,7 +89,8 @@ class Log {
             }
         }
 
-        void Error(const char *error, ...) {
+        void Error(const char *error, ...) 
+        {
             if(CheckState(ERROR)){
 
                 va_list arg;
@@ -138,7 +142,8 @@ class Log {
             }
         }
 
-        void PError( const char *_perror) {
+        void PError( const char *_perror) 
+        {
             if(CheckState(PERROR)){
 
                 char string[strlen(_perror) + 8];
@@ -147,7 +152,8 @@ class Log {
             }
         }
 
-        void Warn(const char *warning, ...) {
+        void Warn(const char *warning, ...) 
+        {
             if(CheckState(WARN)){
 
                 va_list arg;
@@ -200,7 +206,8 @@ class Log {
             }
         }
 
-        void Info(const char *info, ...) {
+        void Info(const char *info, ...) 
+        {
             if(CheckState(INFO)){
 
                 va_list arg;
@@ -252,7 +259,8 @@ class Log {
             }
         }
 
-        void Debug(const char *debug, ...) {
+        void Debug(const char *debug, ...) 
+        {
             if(CheckState(DEBUG)){
 
                 va_list arg;
@@ -304,7 +312,8 @@ class Log {
             }
         }
 
-        void Prompt(const char *prompt, ...) {
+        void Prompt(const char *prompt, ...) 
+        {
             if(CheckState(PROMPT)){
                 printf("%s> ", prompt);
             }
