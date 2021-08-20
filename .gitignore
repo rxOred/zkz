@@ -8,3 +8,4 @@ a.out
 Debug
 .cache/
 out/build/*
+Dockerfile
