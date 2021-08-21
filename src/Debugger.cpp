@@ -1168,46 +1168,9 @@ int Main::AttachProcess(void)
 
 #include <cxxopts.hpp>
 
-char **parse_string(char *s)
-{
-    int count = 0;
-    char *str = nullptr;
-    char **pathname = nullptr;
-
-    str = strtok(s, " ");
-    while(str != nullptr){
-        count++;
-        pathname = (char **) realloc(pathname, sizeof(char *) * 
-                (count + 1));
-        if(pathname == nullptr){
-            goto m_failed;
-        }
-        pathname[count - 1] = strdup(str);
-        if(pathname[count - 1] == nullptr){
-            log.PError("Memory allocation failed");
-            goto m_failed;
-        }
-
-        str = strtok(nullptr, " ");
-    }
-    pathname[count] = nullptr;
-    return pathname;
-
-m_failed:
-    if(count >= 1){
-        for(int i = 0; i < count; i++)
-            if(pathname[i])
-                free(pathname[i]);
-    }
-    if(pathname)
-        free(pathname);
-
-failed:
-    return nullptr;
-}
-
 int Main::ParseArguments(int argc, char **argv)
 {
+    char **path = nullptr;
     cxxopts::Options options("zkz", "x86-64 linux debugger");
     options.add_options()
         ("f, file", "filename", cxxopts::value<std::string>())
@@ -1219,16 +1182,13 @@ int Main::ParseArguments(int argc, char **argv)
 
     auto results = options.parse(argc, argv);
 
-    std::cout << "parsing" << std::endl;
     if(results.count("help")){
         PrintUsage();
         exit(0);
     }
-
     if(results.count("file") == 1){
-        char **path = parse_string((char *)results["file"].as<std::
+        path = ParseString((char *)results["file"].as<std::
                 string>().c_str());
-        log.Print("aaa");
         if(path == nullptr)
             goto failed;
         m_debug.SetPathname(path);
@@ -1241,6 +1201,10 @@ int Main::ParseArguments(int argc, char **argv)
     }
     if(results.count("i")){
         m_debug.SetInforeg();
+    }
+
+    if(path == nullptr && m_debug.GetPid() == 0){
+        log.PError("Expected a process ID or a file name");
     }
 
     return 0;
@@ -1257,37 +1221,51 @@ int Main::Debugger(void)
         int ret = AttachProcess();
         if(ret == 1) return 0;
         else if(ret == -1) return -1;
+
+        m_base_addr = GetBaseAddress(m_debug.GetPid());
+        m_line_info_ptr = new DebugLineInfo(m_base_addr);
+        std::thread worker_debuglines(&Main::InitDebugLines, this);
+
+        if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
+            log.PError("Ptrace error");
+            return -1;
+        }
+
+        worker_debuglines.join();
+        log.Print("[zkz] Started debugging\trip : %x\n", m_regs.rip);
+
+        m_debug.SetSym();
     }
     else if(m_debug.GetPathname()){
         int ret = StartProcess();
         if(ret == 1) return 0;
         else if(ret == -1) return -1;
+
+        m_base_addr = GetBaseAddress(m_debug.GetPid());
+        m_line_info_ptr = new DebugLineInfo(m_base_addr);
+        m_symbols_ptr = new Symbol(m_debug.GetPathname()[0], m_base_addr);
+
+        std::thread worker_debuglines(&Main::InitDebugLines, this);
+        std::thread worker_elfsyms(&Symbol::OpenFile, m_symbols_ptr, 0);
+
+        if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
+            log.PError("Ptrace error");
+            return -1;
+        }
+
+        worker_elfsyms.join();
+        worker_debuglines.join();
+        log.Print("[zkz] Started debugging\trip : %x\n", m_regs.rip);
+
+        if(m_symbols_ptr->b_load_failed){
+            log.Error("Error parsing symbols");
+            m_debug.SetSym();
+        }
     }
-
-    m_base_addr = GetBaseAddress(m_debug.GetPid());
-    m_symbols_ptr = new Symbol(m_debug.GetPathname()[0], m_base_addr);
-    m_line_info_ptr = new DebugLineInfo(m_base_addr);
-
-    std::thread worker_debuglines(&Main::InitDebugLines, this);
-    //std::thread worker_elfsyms(&Symbol::OpenFile, m_symbols_ptr, 0);
 
     /*
      * printing where rip is at 
      */
-    if(ptrace(PTRACE_GETREGS, m_debug.GetPid(), nullptr, &m_regs) < 0){
-        log.PError("Ptrace error");
-        return -1;
-    }
-    log.Print("[zkz] Started debugging\trip : %x\n", m_regs.rip);
-
-    //worker_elfsyms.join();
-    worker_debuglines.join();
-
-    if(m_symbols_ptr->b_load_failed){
-        log.Error("Error parsing symbols");
-        m_debug.SetSym();
-    }
-
     if(MainLoop() < 0) return -1;
 
     return 0;
