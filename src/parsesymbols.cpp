@@ -27,6 +27,7 @@ Symbol::~Symbol()
  * corresponding ro InitReconstruction in Reconstruct class
  */
 int Symbol::OpenFile(int index){
+    log.Debug(P_list[index]);
     if(OpenElf((const char *)P_list[index]) < 0){
         goto failed;
     }

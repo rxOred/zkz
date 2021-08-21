@@ -2,6 +2,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <iterator>
 #include <libelfin/dwarf/dwarf++.hh>
@@ -378,10 +379,13 @@ void Main::InitDebugLines(void)
         log.PError("File open error");
         m_debug.SetDwarf();
     }
-
-    elf_f = elf::elf{elf::create_mmap_loader(fd)};
-    dwarf_f = dwarf::dwarf(dwarf::elf::create_loader(elf_f));
-
+    try{
+        elf_f = elf::elf{elf::create_mmap_loader(fd)};
+        dwarf_f = dwarf::dwarf(dwarf::elf::create_loader(elf_f));
+    } catch (std::exception& e){
+        log.PError(e.what());
+        std::exit(0);
+    }
     int i = 0;
 
     for(auto cu : dwarf_f.compilation_units()){
@@ -1166,34 +1170,28 @@ int Main::AttachProcess(void)
 
 char **parse_string(char *s)
 {
-    int count = 1;
-    char **pathname = (char **)malloc(sizeof(char *) * count);
+    int count = 0;
     char *str = nullptr;
-    if(pathname == nullptr){
-        log.PError("Memory allocation failed");
-        goto failed;
-    }
+    char **pathname = nullptr;
+
     str = strtok(s, " ");
-    pathname[0] = strdup(str);
-    if(pathname[0] == nullptr){
-        log.PError("Memory allocation error");
-        goto m_failed;
-    }
     while(str != nullptr){
         count++;
         pathname = (char **) realloc(pathname, sizeof(char *) * 
-                count);
+                (count + 1));
         if(pathname == nullptr){
             goto m_failed;
         }
-
-        str = strtok(nullptr, " ");
         pathname[count - 1] = strdup(str);
         if(pathname[count - 1] == nullptr){
             log.PError("Memory allocation failed");
             goto m_failed;
         }
+
+        str = strtok(nullptr, " ");
     }
+    pathname[count] = nullptr;
+    return pathname;
 
 m_failed:
     if(count >= 1){
@@ -1228,14 +1226,12 @@ int Main::ParseArguments(int argc, char **argv)
     }
 
     if(results.count("file") == 1){
-#ifdef DEBUG
-        std::cout << results["file"].as<std::string>() << std::endl;
-#endif
         char **path = parse_string((char *)results["file"].as<std::
                 string>().c_str());
+        log.Print("aaa");
         if(path == nullptr)
             goto failed;
-
+        m_debug.SetPathname(path);
     } else if(results.count("pid") == 1) {
         m_debug.SetPid(results["pid"].as<int>());
     }
@@ -1247,6 +1243,7 @@ int Main::ParseArguments(int argc, char **argv)
         m_debug.SetInforeg();
     }
 
+    return 0;
 failed:
     return -1;
 }
@@ -1272,7 +1269,7 @@ int Main::Debugger(void)
     m_line_info_ptr = new DebugLineInfo(m_base_addr);
 
     std::thread worker_debuglines(&Main::InitDebugLines, this);
-    std::thread worker_elfsyms(&Symbol::OpenFile, m_symbols_ptr, 0);
+    //std::thread worker_elfsyms(&Symbol::OpenFile, m_symbols_ptr, 0);
 
     /*
      * printing where rip is at 
@@ -1283,7 +1280,7 @@ int Main::Debugger(void)
     }
     log.Print("[zkz] Started debugging\trip : %x\n", m_regs.rip);
 
-    worker_elfsyms.join();
+    //worker_elfsyms.join();
     worker_debuglines.join();
 
     if(m_symbols_ptr->b_load_failed){
