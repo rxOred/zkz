@@ -5,6 +5,44 @@
 #include <string.h>
 #include "debug.h"
 
+char **ParseString(char *s)
+{
+    int count = 0;
+    char *str = nullptr;
+    char **pathname = nullptr;
+
+    str = strtok(s, " ");
+    while(str != nullptr){
+        count++;
+        pathname = (char **) realloc(pathname, sizeof(char *) * 
+                (count + 1));
+        if(pathname == nullptr){
+            goto m_failed;
+        }
+        pathname[count - 1] = strdup(str);
+        if(pathname[count - 1] == nullptr){
+            log.PError("Memory allocation failed");
+            goto m_failed;
+        }
+
+        str = strtok(nullptr, " ");
+    }
+    pathname[count] = nullptr;
+    return pathname;
+
+m_failed:
+    if(count >= 1){
+        for(int i = 0; i < count; i++)
+            if(pathname[i])
+                free(pathname[i]);
+    }
+    if(pathname)
+        free(pathname);
+
+failed:
+    return nullptr;
+}
+
 void PrintHelp(void){
 
     log.Print("[zkz] help\nQuick navigation help for zkz debugger\n\t \
