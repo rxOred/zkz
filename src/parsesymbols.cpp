@@ -41,6 +41,11 @@ failed:
     return -FAILED;
 }
 
+
+/* 
+ * BUG I see a big fucking memory leak!
+ * fix it 
+ */
 int Symbol::LoadSymbols()
 {
     char *str = nullptr;
