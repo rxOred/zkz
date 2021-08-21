@@ -33,9 +33,9 @@
 #include "Debugger.h"
 #include "log.h"
 
-#define EXIT_STATUS 1
-#define STOPPED_STATUS 2
-#define SIGNALED_STATUS 3
+#define EXIT_STATUS         1
+#define STOPPED_STATUS      2
+#define SIGNALED_STATUS     3
 
 void Main::KillProcess(pid_t pid) const
 {
@@ -382,10 +382,13 @@ void Main::InitDebugLines(void)
     try{
         elf_f = elf::elf{elf::create_mmap_loader(fd)};
         dwarf_f = dwarf::dwarf(dwarf::elf::create_loader(elf_f));
-    } catch (std::exception& e){
+    } catch(std::exception& e){
         log.PError(e.what());
-        std::exit(0);
+        log.Info("source information not available\n");
+        m_debug.SetDwarf();
+        return;
     }
+    log.Debug("passes here\n");
     int i = 0;
 
     for(auto cu : dwarf_f.compilation_units()){
@@ -1167,7 +1170,6 @@ int Main::AttachProcess(void)
 }
 
 #include <cxxopts.hpp>
-
 int Main::ParseArguments(int argc, char **argv)
 {
     char **path = nullptr;
@@ -1187,11 +1189,14 @@ int Main::ParseArguments(int argc, char **argv)
         exit(0);
     }
     if(results.count("file") == 1){
+        int count = 0;
         path = ParseString((char *)results["file"].as<std::
-                string>().c_str());
+                string>().c_str(), count);
         if(path == nullptr)
             goto failed;
         m_debug.SetPathname(path);
+        m_debug.SetCount(count);
+
     } else if(results.count("pid") == 1) {
         m_debug.SetPid(results["pid"].as<int>());
     }

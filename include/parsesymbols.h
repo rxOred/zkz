@@ -19,7 +19,8 @@ class Symbol : public Elf {
 
     public:
         bool b_load_failed;
-        Symbol(const char *pathname, uint64_t base_addr):Elf(pathname, base_addr)
+        Symbol(const char *pathname, uint64_t base_addr)
+            :Elf(pathname, base_addr), b_load_failed(false)
         {
             P_list.push_back((char *)pathname);
         }
