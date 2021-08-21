@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "elfp.h"
+#include <vector>
 
 class Symbol : public Elf {
     private:
@@ -20,7 +21,7 @@ class Symbol : public Elf {
         bool b_load_failed;
         Symbol(const char *pathname, uint64_t base_addr):Elf(pathname, base_addr)
         {
-            //pushback pathname
+            P_list.push_back((char *)pathname);
         }
 
         ~Symbol();
