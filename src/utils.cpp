@@ -5,9 +5,9 @@
 #include <string.h>
 #include "debug.h"
 
-char **ParseString(char *s)
+char **ParseString(char *s, int& count)
 {
-    int count = 0;
+    count = 0;
     char *str = nullptr;
     char **pathname = nullptr;
 
@@ -24,7 +24,6 @@ char **ParseString(char *s)
             log.PError("Memory allocation failed");
             goto m_failed;
         }
-
         str = strtok(nullptr, " ");
     }
     pathname[count] = nullptr;

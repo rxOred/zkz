@@ -3,7 +3,6 @@
 
 void PrintUsage(void);
 void PrintHelp(void);
-char **ParseString(char *s);
-
+char **ParseString(char *s, int& count);
 
 #endif /* UTILS_H */
