@@ -15,3 +15,7 @@
 - Implement system call injection
 - Search for patterns in memory (using ptrace)
 - Profiling
+
+## note
+
+-some source/header files related to code injection and process reconstruction will be replaced.
