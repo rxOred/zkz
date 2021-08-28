@@ -19,3 +19,4 @@
 ## note
 
 -some source/header files related to code injection and process reconstruction will be replaced.
+-zkinject library will replace above parts. until im done with it, im gonna pause development of zkz.
