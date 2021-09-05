@@ -76,6 +76,7 @@ int Symbol::LoadSymbols()
                             goto mem_failed;
                         }
 
+                        /* not this base addr, the one that shared library loads */
                         syminfo->m_address = m_base_addr + sym[j].st_value;
                         S_list.push_back(syminfo);
                     }

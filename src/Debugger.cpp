@@ -398,6 +398,10 @@ void Main::InitDebugLines(void)
     }
 }
 
+/* TODO
+ * replace prompt and this long list of options with handlers and 
+ * readline library
+ */
 int Main::MainLoop(void)
 {
     log.SetState(PRINT | PROMPT | WARN | INFO | DEBUG | PERROR | ERROR);
@@ -1190,8 +1194,8 @@ int Main::ParseArguments(int argc, char **argv)
     }
     if(results.count("file") == 1){
         int count = 0;
-        path = ParseString((char *)results["file"].as<std::
-                string>().c_str(), count);
+        path = ParseString((char *)results["file"].as<std::string>().c_str()
+                , count);
         if(path == nullptr)
             goto failed;
         m_debug.SetPathname(path);

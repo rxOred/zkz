@@ -24,21 +24,6 @@ Breakpoint::Breakpoint(uint64_t address, uint64_t origdata, int
     b_is_enabled = is_enabled;
 }
 
-bool Breakpoint::GetState(void) const
-{
-    return b_is_enabled;
-}
-
-void Breakpoint::DisableBreakpoint(void)
-{
-    b_is_enabled = false; 
-}
-
-void Breakpoint::EnableBreakpoint(void)
-{
-    b_is_enabled = true;
-}
-
 BreakpointList::~BreakpointList()
 {
     for(auto x = B_List.begin(); x != B_List.end(); x++){
@@ -47,11 +32,6 @@ BreakpointList::~BreakpointList()
     }
 
     B_List.clear();
-}
-
-int BreakpointList::GetNoOfBreakpoints() const
-{
-    return B_List.size();
 }
 
 /* add breakpoint to B_List */
