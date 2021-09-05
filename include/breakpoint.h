@@ -32,9 +32,20 @@ class Breakpoint{
         Breakpoint();
         Breakpoint(uint64_t address, uint64_t origdata, int breakpoint_number, bool
                 is_enabled);
-        bool GetState(void) const;
-        void DisableBreakpoint(void);
-        void EnableBreakpoint(void);
+        inline bool GetState(void) const
+        {
+            return b_is_enabled;
+        }
+
+        inline void DisableBreakpoint(void)
+        {
+            b_is_enabled = false;
+        }
+
+        inline void EnableBreakpoint(void)
+        {
+            b_is_enabled = true;
+        }
 };
 
 class BreakpointList{
@@ -49,7 +60,10 @@ class BreakpointList{
     public:
         ~BreakpointList();
 
-        int GetNoOfBreakpoints() const;
+        inline int GetNoOfBreakpoints() const
+        {
+            return B_List.size();
+        }
         void AppendElement(uint64_t address, uint64_t origdata);
         int RemoveElement(const Debug& debug, int breakpoint_number);
         Breakpoint *GetElementByIndex(int index) const;

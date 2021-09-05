@@ -13,6 +13,7 @@
 
 class Main{
 
+    /* TODO use unique_ptr */
     private:
         /* Debugee information */
         Debug m_debug;
