@@ -7,8 +7,11 @@
 - Source lines - memory addresses mapping
 - System call tracing
 
-## TODO
+### TODO
 
+- Line editing
+- Use zkinject exception classes for error handling
+- Use shared pointers
 - x86 support:3
 - Signal handling
 - Implement code injection (.)
