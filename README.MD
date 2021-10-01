@@ -13,8 +13,6 @@
 - Signal handling
 - Implement code injection (.)
 - Implement system call injection
-- Search for patterns in memory (using ptrace)
-- Profiling
 
 ## note
 
